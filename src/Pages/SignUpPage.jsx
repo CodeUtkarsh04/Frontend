@@ -131,7 +131,7 @@ const OTPInput = ({ otp, setOtp, error }) => {
             onChange={(e) => handleChange(e.target.value, index)}
             onKeyDown={(e) => handleKeyDown(e, index)}
             className={`w-12 h-12 text-center text-lg font-semibold border-2 rounded-lg focus:outline-none focus:ring-2 transition-colors ${error ? 'border-red-300 bg-red-50 focus:border-red-400 focus:ring-red-200' :
-                'border-gray-300 focus:border-blue-400 focus:ring-blue-200'
+              'border-gray-300 focus:border-blue-400 focus:ring-blue-200'
               }`}
             maxLength={1}
             inputMode="numeric"
@@ -157,7 +157,7 @@ export default function SignUpPage({ onSuccess, onError, apiEndpoint = `${BASE_U
     email: '',
     password: '',
     confirmPassword: '',
-    dateOfBirth: ''  
+    dateOfBirth: ''
   });
 
   const [touched, setTouched] = useState({});
@@ -190,7 +190,7 @@ export default function SignUpPage({ onSuccess, onError, apiEndpoint = `${BASE_U
     const passwordValid = validatePassword(formData.password);
     const confirmPasswordValid = formData.password === formData.confirmPassword && formData.confirmPassword.length > 0;
 
-    const dobValid = formData.dateOfBirth && (() => {
+    const dobValid = !!formData.dateOfBirth && (() => {
       const birthDate = new Date(formData.dateOfBirth);
       const today = new Date();
       let age = today.getFullYear() - birthDate.getFullYear();
@@ -200,6 +200,7 @@ export default function SignUpPage({ onSuccess, onError, apiEndpoint = `${BASE_U
       }
       return age >= 18 && age <= 100;
     })();
+
 
     return {
       email: {
@@ -226,9 +227,13 @@ export default function SignUpPage({ onSuccess, onError, apiEndpoint = `${BASE_U
       },
       dateOfBirth: {
         isValid: dobValid,
-        error: !dobValid && touched.dateOfBirth ?
-          (!formData.dateOfBirth ? 'Date of birth is required' : 'You must be between 18 and 60 years old') : ''
+        error: !dobValid && touched.dateOfBirth
+          ? (!formData.dateOfBirth
+            ? 'Date of birth is required'
+            : 'You must be between 18 and 100 years old')
+          : ''
       }
+
     };
   }, [formData, touched]);
 
@@ -246,16 +251,15 @@ export default function SignUpPage({ onSuccess, onError, apiEndpoint = `${BASE_U
   }, []);
 
   const handleStep1Submit = () => {
-    setTouched({ email: true, username: true, password: true, confirmPassword: true });
+  if (!isStep1Valid) {
+    setSubmitError('⚠️ Please fill the form correctly');
+    return;
+  }
 
-    if (!isStep1Valid) {
-      setSubmitError('Please correct the errors above');
-      return;
-    }
+  setSubmitError('');
+  setStep(2);
+};
 
-    setSubmitError('');
-    setStep(2);
-  };
 
   const handleStep2Submit = async () => {
     setTouched(prev => ({ ...prev, dateOfBirth: true }));
@@ -454,12 +458,12 @@ export default function SignUpPage({ onSuccess, onError, apiEndpoint = `${BASE_U
 
   return (
     <div className="min-h-screen flex items-center justify-center ">
-      <div className="w-500 max-w-md bg-white rounded-xl shadow-lg p-8">
+      <div className="w-full max-w-md bg-white rounded-xl shadow-lg p-4 sm:p-6 md:p-8">
         {/* Progress Bar */}
         <div className="mb-6">
-          <div className="flex justify-between items-center mb-2">
-            <span className="text-sm font-medium text-gray-600">Step {step} of 3</span>
-            <span className="text-sm text-gray-500">{Math.round(progressWidth)}% Complete</span>
+          <div className="flex justify-between items-center mb-2 text-xs sm:text-sm">
+            <span className="font-medium text-gray-600">Step {step} of 3</span>
+            <span className="text-gray-500">{Math.round(progressWidth)}% Complete</span>
           </div>
           <div className="w-full bg-gray-200 rounded-full h-2">
             <div
@@ -489,8 +493,8 @@ export default function SignUpPage({ onSuccess, onError, apiEndpoint = `${BASE_U
                 onChange={(e) => handleInputChange('email', e.target.value)}
                 onBlur={() => handleBlur('email')}
                 className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:outline-none transition-colors ${validation.email.error
-                    ? 'border-red-300 bg-red-50 focus:ring-red-200 focus:border-red-400'
-                    : 'border-gray-300 focus:ring-blue-200 focus:border-blue-400'
+                  ? 'border-red-300 bg-red-50 focus:ring-red-200 focus:border-red-400'
+                  : 'border-gray-300 focus:ring-blue-200 focus:border-blue-400'
                   }`}
                 placeholder="email@example.com"
                 disabled={isSubmitting}
@@ -515,8 +519,8 @@ export default function SignUpPage({ onSuccess, onError, apiEndpoint = `${BASE_U
                 onChange={(e) => handleInputChange('username', e.target.value)}
                 onBlur={() => handleBlur('username')}
                 className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:outline-none transition-colors ${validation.username.error
-                    ? 'border-red-300 bg-red-50 focus:ring-red-200 focus:border-red-400'
-                    : 'border-gray-300 focus:ring-blue-200 focus:border-blue-400'
+                  ? 'border-red-300 bg-red-50 focus:ring-red-200 focus:border-red-400'
+                  : 'border-gray-300 focus:ring-blue-200 focus:border-blue-400'
                   }`}
                 placeholder="Choose a unique username"
                 disabled={isSubmitting}
@@ -542,8 +546,8 @@ export default function SignUpPage({ onSuccess, onError, apiEndpoint = `${BASE_U
                   onChange={(e) => handleInputChange('password', e.target.value)}
                   onBlur={() => handleBlur('password')}
                   className={`w-full px-4 py-3 pr-12 border rounded-lg focus:ring-2 focus:outline-none transition-colors ${validation.password.error
-                      ? 'border-red-300 bg-red-50 focus:ring-red-200 focus:border-red-400'
-                      : 'border-gray-300 focus:ring-blue-200 focus:border-blue-400'
+                    ? 'border-red-300 bg-red-50 focus:ring-red-200 focus:border-red-400'
+                    : 'border-gray-300 focus:ring-blue-200 focus:border-blue-400'
                     }`}
                   placeholder="Create a strong password"
                   disabled={isSubmitting}
@@ -581,8 +585,8 @@ export default function SignUpPage({ onSuccess, onError, apiEndpoint = `${BASE_U
                   onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
                   onBlur={() => handleBlur('confirmPassword')}
                   className={`w-full px-4 py-3 pr-12 border rounded-lg focus:ring-2 focus:outline-none transition-colors ${validation.confirmPassword.error
-                      ? 'border-red-300 bg-red-50 focus:ring-red-200 focus:border-red-400'
-                      : 'border-gray-300 focus:ring-blue-200 focus:border-blue-400'
+                    ? 'border-red-300 bg-red-50 focus:ring-red-200 focus:border-red-400'
+                    : 'border-gray-300 focus:ring-blue-200 focus:border-blue-400'
                     }`}
                   placeholder="Confirm your password"
                   disabled={isSubmitting}
@@ -643,8 +647,8 @@ export default function SignUpPage({ onSuccess, onError, apiEndpoint = `${BASE_U
                 onChange={(e) => handleInputChange('dateOfBirth', e.target.value)}
                 onBlur={() => handleBlur('dateOfBirth')}
                 className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:outline-none transition-colors ${validation.dateOfBirth.error
-                    ? 'border-red-300 bg-red-50 focus:ring-red-200 focus:border-red-400'
-                    : 'border-gray-300 focus:ring-blue-200 focus:border-blue-400'
+                  ? 'border-red-300 bg-red-50 focus:ring-red-200 focus:border-red-400'
+                  : 'border-gray-300 focus:ring-blue-200 focus:border-blue-400'
                   }`}
                 disabled={isSubmitting}
                 max={new Date().toISOString().split('T')[0]}
