@@ -147,7 +147,7 @@ const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
   return (
     <div className="min-h-screen flex items-center justify-center p-6 ">
-      <div className="w-full max-w-sm bg-white rounded-2xl shadow-xl p-12">
+      <div className="w-full max-w-sm bg-white rounded-2xl shadow-xl p-6 sm:p-8 md:p-12">
         {/* Header */}
         <h1 className="text-3xl font-extrabold text-center text-[#111827] mb-3">
           Log In
@@ -172,7 +172,7 @@ const BASE_URL = import.meta.env.VITE_API_BASE_URL;
         {/* Form */}
         <form onSubmit={handleSubmit} className="flex flex-col items-center space-y-6">
           {/* Email */}
-          <div className="w-80">
+          <div className="w-full max-w-xs">
             <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
               Email Address
             </label>
@@ -195,7 +195,7 @@ const BASE_URL = import.meta.env.VITE_API_BASE_URL;
           </div>
 
           {/* Password */}
-          <div className="w-80">
+          <div className="w-full max-w-xs">
             <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
               Password
             </label>
@@ -236,7 +236,7 @@ const BASE_URL = import.meta.env.VITE_API_BASE_URL;
           </div>
 
           {/* Button */}
-          <div className="w-80">
+          <div className="w-full max-w-xs">
             <button
               type="submit"
               disabled={loading}
