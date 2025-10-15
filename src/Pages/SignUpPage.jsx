@@ -8,7 +8,7 @@ const validateEmail = (email) => {
   return emailRegex.test(email) && email.length <= 254;
 };
 
-const BASE_URL = import.meta.env.VITE_API_BASE;
+const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 const validatePassword = (password) => {
   const checks = {
