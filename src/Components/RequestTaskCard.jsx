@@ -28,7 +28,7 @@ function RequestTaskCard({ variant = "default" }) {
   const mapInstance = useRef(null);
   const markerRef = useRef(null);
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL;
+  const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 
   const categoryExamples = {
@@ -138,7 +138,7 @@ const BASE_URL = import.meta.env.VITE_API_BASE_URL;
     requestAnimationFrame(() => {
       try {
         map.invalidateSize();
-      } catch {}
+      } catch { }
     });
   };
   /* ===== Map-only changes end ===== */
@@ -178,11 +178,8 @@ const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
   // submit
   // helper: map UI urgency -> backend values
-  const mapUrgency = (u) => {
-    if (u === "asap") return "asap";
-    if (u === "today") return "today"; // change if your backend expects something else
-    return "today";
-  };
+  const mapUrgency = (u) => (u === "asap" ? "asap" : "today");
+
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -324,7 +321,7 @@ const BASE_URL = import.meta.env.VITE_API_BASE_URL;
       }
       // tidy up any leftover leaflet id on the DOM node (helps in HMR/dev)
       if (mapRef.current && mapRef.current._leaflet_id) {
-        try { delete mapRef.current._leaflet_id; } catch {}
+        try { delete mapRef.current._leaflet_id; } catch { }
       }
     }
   }, [showMap]);
@@ -347,8 +344,12 @@ const BASE_URL = import.meta.env.VITE_API_BASE_URL;
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
       <div
-        className={`w-full ${variant === "dashboard" ? "max-w-3xl transform scale-100" : "max-w-md transform scale-95"} origin-top-right`}
+        className={`w-full ${variant === "dashboard"
+          ? "max-w-3xl transform scale-100"
+          : "max-w-full sm:max-w-md transform scale-95"
+          } origin-top-right`}
       >
+
         {alert.show && (
           <div
             className={`fixed top-5 right-5 z-50 px-6 py-4 rounded-lg shadow-lg text-white font-medium max-w-md transition-all duration-300 ${alert.type === "error" ? "bg-red-500" : "bg-green-500"
@@ -380,8 +381,9 @@ const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
         <div className="bg-white rounded-2xl shadow-2xl p-10 relative">
           <div className="text-center mb-7">
-            <h2 className="text-3xl font-bold text-gray-900 mb-2">Request a task</h2>
-            <p className="text-gray-600 text-lg">Tell us what you need help with</p>
+            <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Request a task</h2>
+            <p className="text-gray-600 text-base sm:text-lg">Tell us what you need help with</p>
+
           </div>
 
           <div className="space-y-8">
@@ -443,7 +445,7 @@ const BASE_URL = import.meta.env.VITE_API_BASE_URL;
             <div>
               <label className="block text-base font-semibold text-gray-800 mb-2">Your location</label>
               <div className="space-y-3">
-                <div className="flex gap-3">
+                <div className="flex flex-col sm:flex-row gap-3">
                   <input
                     type="text"
                     name="location"
@@ -456,7 +458,7 @@ const BASE_URL = import.meta.env.VITE_API_BASE_URL;
                   <button
                     type="button"
                     onClick={() => setShowMap((v) => !v)}
-                    className="px-4 py-4 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors flex items-center justify-center"
+                    className="px-4 py-3 sm:py-4 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors flex items-center justify-center"
                   >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
@@ -549,7 +551,7 @@ const BASE_URL = import.meta.env.VITE_API_BASE_URL;
               onClick={handleSubmit}
               disabled={isSubmitting}
               aria-busy={isSubmitting}
-              className={`w-full py-5 font-bold text-xl rounded-xl transition-all duration-200 transform ${isSubmitting
+              className={`w-full py-4 sm:py-5 font-bold text-lg sm:text-xl rounded-xl  transition-all duration-200 transform ${isSubmitting
                 ? "bg-gray-400 cursor-not-allowed text-white"
                 : "bg-blue-800 text-white hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0"
                 }`}
