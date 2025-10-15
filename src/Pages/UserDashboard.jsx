@@ -44,8 +44,8 @@ function UserDashboard() {
       <section className="max-w-7xl mx-auto px-6 py-16">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-start">
           {/* 📌 Left: Enlarged Request Task Card */}
-          <div className="md:col-span-2 bg-white rounded-2xl shadow-lg p-8">
-            <RequestTaskCard variant="dashboard"/>
+          <div className="md:col-span-2">
+            <RequestTaskCard variant="default" />
           </div>
 
           {/* 📋 Right: Top 3 Tasks (Compact View) */}
@@ -73,13 +73,12 @@ function UserDashboard() {
                     <Clock size={14} className="mr-1" /> {task.date}
                   </div>
                   <span
-                    className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                      task.status === "Completed"
+                    className={`px-2 py-1 text-xs font-semibold rounded-full ${task.status === "Completed"
                         ? "bg-green-100 text-green-700"
                         : task.status === "In-Progress"
-                        ? "bg-yellow-100 text-yellow-700"
-                        : "bg-blue-100 text-blue-700"
-                    }`}
+                          ? "bg-yellow-100 text-yellow-700"
+                          : "bg-blue-100 text-blue-700"
+                      }`}
                   >
                     {task.status}
                   </span>

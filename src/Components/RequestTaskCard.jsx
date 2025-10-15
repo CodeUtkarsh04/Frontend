@@ -342,17 +342,17 @@ function RequestTaskCard({ variant = "default" }) {
   const fillPercent = Math.round((formData.budget / 9999) * 100);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
-      <div
-        className={`w-full ${variant === "dashboard"
-          ? "max-w-3xl transform scale-100"
-          : "max-w-full sm:max-w-md transform scale-95"
-          } origin-top-right`}
-      >
+    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className={`w-full ${variant === "dashboard"
+        ? "max-w-full sm:max-w-3xl"
+        : "max-w-full sm:max-w-md"
+        } origin-top-right`}>
+
+
 
         {alert.show && (
           <div
-            className={`fixed top-5 right-5 z-50 px-6 py-4 rounded-lg shadow-lg text-white font-medium max-w-md transition-all duration-300 ${alert.type === "error" ? "bg-red-500" : "bg-green-500"
+            className={`fixed top-3 right-3 z-50 px-4 py-3 rounded-lg shadow-md text-white font-medium max-w-md transition-all duration-300 ${alert.type === "error" ? "bg-red-500" : "bg-green-500"
               }`}
           >
             {alert.message}
@@ -360,8 +360,8 @@ function RequestTaskCard({ variant = "default" }) {
         )}
 
         {showModal && (
-          <div className="fixed inset-0 bg-white/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-2xl p-8 max-w-md w-full text-center">
+          <div className="fixed inset-0 bg-white/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl p-6 max-w-sm w-full text-center">
               <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <svg className="w-8 h-8 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
@@ -379,14 +379,14 @@ function RequestTaskCard({ variant = "default" }) {
           </div>
         )}
 
-        <div className="bg-white rounded-2xl shadow-2xl p-10 relative">
-          <div className="text-center mb-7">
-            <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Request a task</h2>
-            <p className="text-gray-600 text-base sm:text-lg">Tell us what you need help with</p>
+        <div className="bg-white rounded-xl shadow-xl">
+          <div className="text-center mb-6 pt-4">
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Request a task</h2>
+            <p className="text-gray-600 text-sm">Tell us what you need help with</p>
 
           </div>
 
-          <div className="space-y-8">
+          <div className="space-y-6 px-4 pb-6">
             {/* Description */}
             <div>
               <label className="block text-base font-semibold text-gray-800 mb-2">What do you need help with?</label>
@@ -395,13 +395,12 @@ function RequestTaskCard({ variant = "default" }) {
                 name="description"
                 value={formData.description}
                 onChange={handleInputChange}
-                className="w-full px-6 py-5 bg-gray-50 border-2 border-gray-200 rounded-xl resize-none focus:outline-none focus:ring-3 focus:ring-blue-100 focus:border-blue-600 focus:bg-white transition-all duration-200 text-base"
-                placeholder={
+                className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring focus:ring-blue-100 focus:border-blue-600 text-base" placeholder={
                   formData.category && categoryExamples[formData.category]
                     ? `e.g., ${categoryExamples[formData.category]}`
                     : "e.g., Pick up groceries from Big Bazaar, walk my dog for 30 minutes..."
                 }
-                rows="4"
+                rows="3"
                 required
               />
             </div>
@@ -413,7 +412,7 @@ function RequestTaskCard({ variant = "default" }) {
                 name="category"
                 value={formData.category}
                 onChange={handleInputChange}
-                className="w-full px-4 py-4 bg-gray-50 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-3 focus:ring-blue-100 focus:border-blue-600 focus:bg-white transition-all duration-200 appearance-none cursor-pointer text-base"
+                className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring focus:ring-blue-100 focus:border-blue-600  focus:bg-white transition-all duration-200 appearance-none cursor-pointer text-base"
                 required
               >
                 <option value="">Select a category</option>
@@ -435,7 +434,7 @@ function RequestTaskCard({ variant = "default" }) {
                 name="address"
                 value={formData.address}
                 onChange={handleInputChange}
-                className="w-full px-4 py-4 bg-gray-50 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-3 focus:ring-blue-100 focus:border-blue-600 focus:bg-white transition-all duration-200 text-base"
+                className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring focus:ring-blue-100 focus:border-blue-600  focus:bg-white transition-all duration-200 text-base"
                 placeholder="Enter Building No, Room No"
                 required
               />
@@ -445,20 +444,20 @@ function RequestTaskCard({ variant = "default" }) {
             <div>
               <label className="block text-base font-semibold text-gray-800 mb-2">Your location</label>
               <div className="space-y-3">
-                <div className="flex flex-col sm:flex-row gap-3">
+                <div className="flex flex-col sm:flex-row gap-2">
                   <input
                     type="text"
                     name="location"
                     value={formData.location}
                     onChange={handleInputChange}
-                    className="flex-1 px-4 py-4 bg-gray-50 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-3 focus:ring-blue-100 focus:border-blue-600 focus:bg-white transition-all duration-200 text-base"
+                    className="flex-1 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring focus:ring-blue-100 focus:border-blue-600  focus:bg-white transition-all duration-200 text-base"
                     placeholder="Enter your area or full address"
                     required
                   />
                   <button
                     type="button"
                     onClick={() => setShowMap((v) => !v)}
-                    className="px-4 py-3 sm:py-4 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors flex items-center justify-center"
+                     className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center"
                   >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
@@ -468,7 +467,7 @@ function RequestTaskCard({ variant = "default" }) {
                 </div>
 
                 {showMap && (
-                  <div className="bg-gray-50 rounded-xl p-4 border-2 border-gray-200">
+                  <div className="bg-gray-50 rounded-lg border border-gray-200 p-2">
                     <div className="flex justify-between items-center mb-3">
                       <span className="text-sm font-medium text-gray-700">Click on map to select location</span>
                       <button
@@ -482,7 +481,7 @@ function RequestTaskCard({ variant = "default" }) {
                     {/* ===== Map-only change: added minHeight safety ===== */}
                     <div
                       ref={mapRef}
-                      className="h-64 rounded-lg overflow-hidden border border-gray-300"
+                      className="w-full h-56 rounded-lg border border-gray-300"
                       style={{ minHeight: 256 }}
                     />
                   </div>
@@ -497,7 +496,7 @@ function RequestTaskCard({ variant = "default" }) {
                 name="urgency"
                 value={formData.urgency}
                 onChange={handleInputChange}
-                className="w-full px-4 py-4 bg-gray-50 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-3 focus:ring-blue-100 focus:border-blue-600 focus:bg-white transition-all duration-200 appearance-none cursor-pointer text-base"
+                className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring focus:ring-blue-100 focus:border-blue-600  focus:bg-white transition-all duration-200 appearance-none cursor-pointer text-base"
                 required
               >
                 <option value="">Select timing</option>
@@ -509,7 +508,7 @@ function RequestTaskCard({ variant = "default" }) {
             {/* Budget */}
             <div>
               <label className="block text-base font-semibold text-gray-800 mb-2">Budget</label>
-              <div className="bg-blue-50 rounded-xl p-5 mt-3">
+              <div className="bg-blue-50 rounded-lg p-3 mt-3">
                 <div className="mb-4">
                   <input
                     type="range"
@@ -551,11 +550,9 @@ function RequestTaskCard({ variant = "default" }) {
               onClick={handleSubmit}
               disabled={isSubmitting}
               aria-busy={isSubmitting}
-              className={`w-full py-4 sm:py-5 font-bold text-lg sm:text-xl rounded-xl  transition-all duration-200 transform ${isSubmitting
-                ? "bg-gray-400 cursor-not-allowed text-white"
-                : "bg-blue-800 text-white hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0"
-                }`}
-            >
+              className={`w-full py-3 text-lg font-semibold rounded-lg transition-all 
+                ${isSubmitting ? "bg-gray-400 cursor-not-allowed text-white" : "bg-blue-700 text-white hover:bg-blue-800"
+                }`}>
               {isSubmitting ? (
                 <span className="inline-flex items-center gap-2">
                   <span className="inline-block h-5 w-5 rounded-full border-2 border-white border-t-transparent animate-spin" />
