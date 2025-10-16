@@ -36,7 +36,7 @@ export default function LogInPage({ mode = "user" }) {
     }
   }, [message]);
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL;
+  const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
   const loginApiCall = async (email, password) => {
 
@@ -160,8 +160,8 @@ const BASE_URL = import.meta.env.VITE_API_BASE_URL;
         {message.text && (
           <div
             className={`mb-4 px-4 py-2 rounded ${message.type === "error"
-                ? "bg-red-50 text-red-700 border border-red-200"
-                : "bg-green-50 text-green-700 border border-green-200"
+              ? "bg-red-50 text-red-700 border border-red-200"
+              : "bg-green-50 text-green-700 border border-green-200"
               }`}
             role="alert"
           >
@@ -184,8 +184,8 @@ const BASE_URL = import.meta.env.VITE_API_BASE_URL;
               onBlur={() => setTouched((t) => ({ ...t, email: true }))}
               placeholder="Enter your email"
               className={`w-full px-4 py-3 rounded-xl border ${touched.email && !emailIsValid
-                  ? "border-red-400 bg-red-50"
-                  : "border-gray-200"
+                ? "border-red-400 bg-red-50"
+                : "border-gray-200"
                 }`}
               disabled={loading}
             />
@@ -208,8 +208,8 @@ const BASE_URL = import.meta.env.VITE_API_BASE_URL;
                 onBlur={() => setTouched((t) => ({ ...t, password: true }))}
                 placeholder="Enter your password"
                 className={`w-full px-4 py-3 rounded-xl border ${touched.password && !passwordIsValid
-                    ? "border-red-400 bg-red-50"
-                    : "border-gray-200"
+                  ? "border-red-400 bg-red-50"
+                  : "border-gray-200"
                   } pr-12`}
                 disabled={loading}
               />
@@ -254,10 +254,18 @@ const BASE_URL = import.meta.env.VITE_API_BASE_URL;
         <div className="mt-8 bg-gray-50 rounded-xl py-3 text-center">
           <p className="text-sm text-gray-600">
             Don't have an account?{" "}
-            <a href="#" className="text-indigo-600 font-medium hover:underline">
+            <a
+              href="#"
+              onClick={(e) => {
+                e.preventDefault();
+                navigate("/signup");
+              }}
+              className="text-indigo-600 font-medium hover:underline"
+            >
               Create a new account
             </a>
           </p>
+
         </div>
       </div>
     </div>
