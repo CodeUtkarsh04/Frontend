@@ -23,7 +23,8 @@ const defaultMarkerIcon = L.icon({
 // ✅ Force Leaflet to use it globally
 L.Marker.prototype.options.icon = defaultMarkerIcon;
 
-console.log("Leaflet icon paths:", defaultMarkerIcon);
+import { useTasks } from "../context/TasksContext.jsx"; // path as appropriate
+
 
 
 
@@ -42,6 +43,8 @@ function RequestTaskCard({ variant = "default" }) {
   const [showMap, setShowMap] = useState(false);
   const [selectedCoords, setSelectedCoords] = useState(null);
   const [alert, setAlert] = useState({ show: false, message: "", type: "info" });
+  const { refresh: refreshTasks } = useTasks();
+
 
   const mapRef = useRef(null);
   const mapInstance = useRef(null);
@@ -288,6 +291,7 @@ function RequestTaskCard({ variant = "default" }) {
       }
 
       // success UI
+      // success UI
       setShowModal(true);
       setFormData({
         description: "",
@@ -303,6 +307,19 @@ function RequestTaskCard({ variant = "default" }) {
         mapInstance.current.removeLayer(markerRef.current);
         markerRef.current = null;
         mapInstance.current.setView([19.076, 72.8777], 13);
+      }
+
+      // refresh shared tasks so TopTasks and Dashboard update
+      // non-blocking and swallow errors to avoid breaking UX
+      try {
+        if (typeof refreshTasks === "function") {
+          // optional: pass filters like { limit: 3 } if your provider accepts it
+          refreshTasks().catch((err) => {
+            console.warn("Failed to refresh shared tasks:", err);
+          });
+        }
+      } catch (err) {
+        console.warn("refreshTasks call failed synchronously:", err);
       }
     } catch (err) {
       if (err.name === "AbortError") {

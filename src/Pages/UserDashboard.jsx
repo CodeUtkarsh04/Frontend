@@ -1,8 +1,8 @@
 // UserDashboard.jsx
 import React, { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
-import { MapPin, Clock } from "lucide-react";
 import RequestTaskCard from "../Components/RequestTaskCard.jsx";
+import TopTask from "../Components/TopTask.jsx";           // <-- add
+import { TasksProvider } from "../context/TasksContext.jsx"; // <-- add
 
 /* ============ tiny local API helpers (no new files) ============ */
 const API_BASE = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
@@ -40,10 +40,10 @@ async function fetchJSON(path, opts = {}) {
 const formatDate = (iso) =>
   iso
     ? new Date(iso).toLocaleDateString("en-IN", {
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric",
-      })
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    })
     : "-";
 
 /* ============ component ============ */
@@ -97,7 +97,6 @@ function UserDashboard() {
           </p>
         </div>
 
-        {/* Optional subtle SVG bg */}
         <div className="absolute inset-0 opacity-20 pointer-events-none">
           <svg className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
             <defs>
@@ -111,66 +110,24 @@ function UserDashboard() {
       </section>
 
       {/* 📦 Request Task + Top Tasks */}
+      {/* 📦 Request Task + Top Tasks (wrapped in TasksProvider to share data only here) */}
       <section className="max-w-7xl mx-auto px-6 py-16">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-start">
-          {/* Left: Request Task */}
-          <div className="md:col-span-2">
-            <RequestTaskCard variant="default" />
+        <TasksProvider>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-start">
+            {/* Left: Request Task (will call reload() from context after submit) */}
+            <div className="md:col-span-2">
+              <RequestTaskCard variant="default" />
+            </div>
+
+            {/* Right: Top tasks reads from same context */}
+            <div className="space-y-5">
+              <h3 className="text-xl font-semibold text-gray-800 mb-2">Your Top Tasks</h3>
+              <TopTask />
+            </div>
           </div>
-
-          {/* Right: Top 3 tasks (link to open modal on /tasks) */}
-          <div className="space-y-5">
-            <h3 className="text-xl font-semibold text-gray-800 mb-2">Your Top Tasks</h3>
-
-            {loading ? (
-              <div className="text-gray-500 text-sm">Loading…</div>
-            ) : error ? (
-              <div className="text-rose-600 text-sm">
-                {error.status === 401 ? "Please sign in." : "Could not load tasks."}
-              </div>
-            ) : tasks.length === 0 ? (
-              <div className="text-gray-500 text-sm">No tasks yet.</div>
-            ) : (
-              tasks.map((task) => {
-                const status = String(task.status || "").toLowerCase();
-                const statusClass =
-                  status.includes("complete")
-                    ? "bg-green-100 text-green-700"
-                    : status.includes("progress") || status.includes("ongoing")
-                    ? "bg-yellow-100 text-yellow-700"
-                    : "bg-blue-100 text-blue-700";
-
-                return (
-                  <Link
-                    key={task.id}
-                    to={`/tasks?taskId=${encodeURIComponent(task.id)}`}
-                    className="block bg-white p-4 rounded-xl shadow hover:shadow-lg transition"
-                  >
-                    <h4 className="font-semibold text-gray-800 text-base truncate">
-                      {task.title || task.name || "Untitled Task"}
-                    </h4>
-
-                    <div className="flex items-center text-sm text-gray-500 mt-2">
-                      <MapPin size={14} className="mr-1" />
-                      <span>{task.location || task?.pickupAddressId?.location || "-"}</span>
-                    </div>
-
-                    <div className="flex items-center justify-between text-xs text-gray-500 mt-2">
-                      <div className="flex items-center">
-                        <Clock size={14} className="mr-1" />
-                        {formatDate(task.createdAt || task.date)}
-                      </div>
-                      <span className={`px-2 py-1 text-xs font-semibold rounded-full ${statusClass}`}>
-                        {task.status || "—"}
-                      </span>
-                    </div>
-                  </Link>
-                );
-              })
-            )}
-          </div>
-        </div>
+        </TasksProvider>
       </section>
+
     </>
   );
 }

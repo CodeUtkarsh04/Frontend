@@ -1,21 +1,24 @@
-// components/TopTasks.jsx
+// src/components/TopTask.jsx
 import React from "react";
 import { Link } from "react-router-dom";
-import { MapPin, Clock } from "lucide-react";
 import { useTasks } from "../context/TasksContext.jsx";
 
 const formatDate = (iso) =>
-  iso
-    ? new Date(iso).toLocaleDateString("en-IN", { day: "2-digit", month: "2-digit", year: "numeric" })
-    : "-";
+  iso ? new Date(iso).toLocaleDateString("en-IN", { day: "2-digit", month: "2-digit", year: "numeric" }) : "-";
 
-export default function TopTasks({ max = 3 }) {
-  const { tasks, loading, error } = useTasks();
+export default function TopTask({ max = 3 }) {
+  const { tasks = [], loading, error } = useTasks();
+  console.log("TopTask — tasks from context:", tasks, " loading:", loading, " error:", error);
+
+
+  // debug if you need — uncomment to inspect
+  // console.log("TopTask tasks:", tasks);
+  const STATUS_WANTED = ["available", "pending", "accepted", "ongoing", "in-progress", "in_progress"];
 
   const topOngoing = (tasks || [])
     .filter((t) => {
-      const s = String(t.status || t?.statusKey || "").toLowerCase();
-      return s.includes("ongoing") || s.includes("progress") || s.includes("in-progress") || s.includes("accepted");
+      const s = String(t.status || t.statusKey || "").toLowerCase();
+      return STATUS_WANTED.some((want) => s.includes(want));
     })
     .slice(0, max);
 
@@ -26,40 +29,25 @@ export default function TopTasks({ max = 3 }) {
   return (
     <div className="space-y-3">
       {topOngoing.map((task) => {
-        // pick common keys used in your Task shape
         const id = task.id ?? task._id ?? "-";
-        const title = task.title || task.name || "Untitled Task";
-        const loc = task.location || task?.pickupAddressId?.location || "-";
-        const date = formatDate(task.createdAt ?? task.date);
+        const title = task.title || task.name || (task.description ? task.description.slice(0, 40) + (task.description.length > 40 ? "…" : "") : "Untitled Task");
+        const type = task.category || (task.categoryId && task.categoryId.name) || "—";
         const statusLabel = task.status || task.statusKey || "—";
-
-        const status = String(statusLabel).toLowerCase();
-        const statusClass =
-          status.includes("complete")
-            ? "bg-green-100 text-green-700"
-            : status.includes("progress") || status.includes("ongoing")
-            ? "bg-yellow-100 text-yellow-700"
-            : "bg-blue-100 text-blue-700";
 
         return (
           <Link
             key={id}
-            to={`/tasks?taskId=${encodeURIComponent(id)}`}
-            className="block bg-white p-4 rounded-xl shadow hover:shadow-lg transition"
+            to={`/user/tasks?taskId=${encodeURIComponent(id)}`} // ← opens My Tasks page with query param
+            className="block bg-white p-3 rounded-xl shadow hover:shadow-lg transition"
           >
-            <h4 className="font-semibold text-gray-800 text-base truncate">{title}</h4>
-
-            <div className="flex items-center text-sm text-gray-500 mt-2">
-              <MapPin size={14} className="mr-1" />
-              <span>{loc}</span>
-            </div>
-
-            <div className="flex items-center justify-between text-xs text-gray-500 mt-2">
-              <div className="flex items-center">
-                <Clock size={14} className="mr-1" />
-                {date}
+            <div className="flex items-center justify-between">
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-semibold text-gray-800 truncate">{title}</div>
+                <div className="text-xs text-gray-500 mt-1">{type}</div>
               </div>
-              <span className={`px-2 py-1 text-xs font-semibold rounded-full ${statusClass}`}>{statusLabel}</span>
+              <div className="ml-3 text-xs font-semibold px-2 py-1 rounded-full bg-blue-50 text-blue-700">
+                {statusLabel}
+              </div>
             </div>
           </Link>
         );
