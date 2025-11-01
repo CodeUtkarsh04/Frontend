@@ -48,7 +48,7 @@ const HelperDashNavbar = () => {
           </li>
           <li>
             <NavLink
-              to="/helper/dashboard/available-tasks"
+              to="/helper/dashboard/tasks"
               className={linkClasses}
             >
               My Tasks
@@ -115,7 +115,7 @@ const HelperDashNavbar = () => {
             </li>
             <li>
               <NavLink
-                to="/helper/dashboard/available-tasks"
+                to="/helper/dashboard/tasks"
                 className={linkClasses}
                 onClick={() => setIsOpen(false)}
               >

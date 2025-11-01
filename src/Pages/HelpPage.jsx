@@ -29,7 +29,7 @@ export default function HelpPage() {
   return (
     <div className="text-gray-800 bg-white font-sans antialiased min-h-screen flex flex-col">
       {/* Hero Section */}
-      <header className="mt-10 bg-gradient-to-br from-blue-900 to-sky-400 text-white py-16">
+      <header className="bg-gradient-to-br from-blue-900 to-sky-400 text-white py-16 mt-15">
         <div className="max-w-4xl mx-auto px-6 text-center">
           <h1 className="font-extrabold leading-tight text-4xl sm:text-5xl md:text-5xl">
             Need Help?
@@ -50,13 +50,8 @@ export default function HelpPage() {
 
             <div className="space-y-3">
               <div>
-                <h3 className="text-sm text-slate-500">Phone</h3>
-                <a href="tel:+911234567890" className="text-blue-800 font-medium">+91 12345 67890</a>
-              </div>
-
-              <div>
                 <h3 className="text-sm text-slate-500">Email</h3>
-                <a href="mailto:support@dailydone.com" className="text-blue-800 font-medium">support@dailydone.com</a>
+                <a href="mailto:support@dailydone.com" className="text-blue-800 font-medium">support@dailydone.in</a>
               </div>
 
               <div>

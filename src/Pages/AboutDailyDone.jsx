@@ -75,7 +75,7 @@ export default function AboutDailyDone() {
       {/* HERO */}
       <header
         id="hero-section"
-        className="relative overflow-hidden bg-gradient-to-br from-blue-900 to-sky-400 text-white py-24"
+        className="relative overflow-hidden bg-gradient-to-br from-blue-900 to-sky-400 text-white py-24 mt-15"
       >
         {/* subtle grain-ish overlay */}
         <div className="absolute inset-0 opacity-20 pointer-events-none" aria-hidden>

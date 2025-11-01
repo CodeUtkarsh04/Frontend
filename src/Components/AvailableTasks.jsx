@@ -1,5 +1,5 @@
 // AvailableTasks.jsx
-import React, { useMemo, useState, useEffect } from "react";
+import React, { useMemo, useState, useEffect, useRef } from "react";
 import {
   MapPin, Calendar, User, Package, IndianRupee,
   ArrowRight, Phone, Mail, Home,
@@ -8,8 +8,15 @@ import {
 /* -------------------------------------------------------
    Auth + API config
 -------------------------------------------------------- */
-const BASE_URL = import.meta.env.VITE_API_BASE_URL;
+const BASE_URL = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
 const getToken = () => localStorage.getItem("token") || null;
+// 🔧 EDIT if your backend uses a different path
+const AVAILABLE_ENDPOINT = "/errand/showErrands";
+const ACCEPT_ENDPOINT = "/errand/Accept";
+
+// Add ngrok splash bypass automatically when needed
+const EXTRA_HEADERS =
+  BASE_URL.includes("ngrok") ? { "ngrok-skip-browser-warning": "true" } : {};
 
 /* -------------------------------------------------------
    Utils
@@ -167,48 +174,106 @@ export default function AvailableTasks() {
   const [error, setError] = useState(null);
   const [uiError, setUiError] = useState(null);
 
+  const intervalRef = useRef(null); // keeps interval id for cleanup
+  const busyRef = useRef(false);    // prevents overlapping API calls
+  const failCountRef = useRef(0);   // stop spamming API on repeated failures
+  const MAX_FAILS = 5;
+
+  // ⬇️ define it INSIDE the component so it can access state/refs
+  const fetchErrands = async () => {
+    if (busyRef.current) return;
+    busyRef.current = true;
+
+    try {
+      if (!BASE_URL) {
+        throw new Error("VITE_API_BASE_URL is not set. Configure your API base URL.");
+      }
+
+      const token = getToken();
+      if (!token) throw new Error("Not authenticated");
+
+      const url = `${BASE_URL}${AVAILABLE_ENDPOINT}`;
+      const res = await fetch(url, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: "application/json",
+          ...EXTRA_HEADERS,
+        },
+      });
+
+      if (res.status === 401 || res.status === 403) {
+        throw new Error("Session expired or unauthorized (401/403). Please log in again.");
+      }
+
+      const contentType = res.headers.get("content-type") || "";
+      const raw = await res.text();
+
+      if (!res.ok) {
+        const preview = raw.slice(0, 200);
+        throw new Error(`GET ${url} failed (${res.status}). Body: ${preview}`);
+      }
+
+      if (!contentType.includes("application/json")) {
+        const preview = raw.slice(0, 200);
+        throw new Error(
+          `Expected JSON but got "${contentType || "unknown"}". First 200 chars: ${preview}`
+        );
+      }
+
+      // Safe JSON parse with helpful error
+      let json;
+      try {
+        json = raw ? JSON.parse(raw) : null;
+      } catch (e) {
+        const preview = raw.slice(0, 200);
+        throw new Error(`Bad JSON: ${e.message}. First 200 chars: ${preview}`);
+      }
+
+      const rows = Array.isArray(json) ? json : (json?.data ?? []);
+      const normalized = rows.map(normalize);
+
+      setData(normalized);
+      setError(null);
+
+      // success ⇒ reset fail counter
+      failCountRef.current = 0;
+    } catch (e) {
+      console.error("GET available errands error:", e);
+      setError(e?.message || "Couldn’t load errands.");
+
+      // stop polling if repeatedly failing
+      failCountRef.current += 1;
+      if (failCountRef.current >= MAX_FAILS && intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+        console.warn("Polling stopped due to repeated failures.");
+      }
+    } finally {
+      busyRef.current = false;
+      setLoading(false);
+    }
+  };
+
   // Fetch tasks
   useEffect(() => {
-    const ac = new AbortController();
-    (async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        setUiError(null);
+    setLoading(true);
 
-        const token = getToken();
-        if (!token) throw new Error("Not authenticated");
+    // 1) initial load
+    fetchErrands();
 
-        const url = `${BASE_URL}/errand/showErrands`;
-        const res = await fetch(url, {
-          method: "GET",
-          headers: {
-            Accept: "application/json",
-            Authorization: `Bearer ${token}`,
-            "ngrok-skip-browser-warning": "true",
-          },
-          signal: ac.signal,
-        });
+    // 2) poll every 3 seconds
+    intervalRef.current = setInterval(fetchErrands, 3000);
 
-        if (!res.ok) {
-          const txt = await res.text().catch(() => "");
-          throw new Error(txt || `GET ${url} failed (${res.status})`);
-        }
+    // 3) also refetch when user returns to the tab
+    const onVis = () => { if (!document.hidden) fetchErrands(); };
+    document.addEventListener("visibilitychange", onVis);
 
-        const json = await res.json();
-        const items = Array.isArray(json) ? json : (json.items ?? []);
-        setData(items.map(normalize));
-      } catch (e) {
-        if (e.name !== "AbortError") {
-          console.error("GET /errand/showErrands error:", e);
-          setError("Failed to load errands.");
-          setUiError("Couldn’t load errands. Try again.");
-        }
-      } finally {
-        setLoading(false);
-      }
-    })();
-    return () => ac.abort();
+    // cleanup on unmount
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+      document.removeEventListener("visibilitychange", onVis);
+    };
   }, []);
 
   // Filters
@@ -222,35 +287,46 @@ export default function AvailableTasks() {
   const accept = async (id) => {
     setUiError(null);
     try {
+      if (!BASE_URL) throw new Error("VITE_API_BASE_URL is not set.");
       const token = getToken();
       if (!token) throw new Error("Not authenticated");
 
-      const url = `${BASE_URL}/errand/Accept`;
-
+      const url = `${BASE_URL}${ACCEPT_ENDPOINT}`;
       const res = await fetch(url, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/x-www-form-urlencoded",
-          "ngrok-skip-browser-warning": "true",
+          Accept: "application/json",
+          ...EXTRA_HEADERS,
         },
-        body: new URLSearchParams({ id }), // 🔥 send id as form param
-        credentials: "include",
+        body: new URLSearchParams({ id }), // ensure your backend expects "id"
       });
 
+      const contentType = res.headers.get("content-type") || "";
+      const raw = await res.text();
+
+      if (res.status === 401 || res.status === 403) {
+        throw new Error("Session expired or unauthorized (401/403). Please log in again.");
+      }
       if (!res.ok) {
-        const txt = await res.text().catch(() => "");
-        throw new Error(txt || `POST ${url} failed (${res.status})`);
+        const preview = raw.slice(0, 200);
+        throw new Error(`POST ${url} failed (${res.status}). Body: ${preview}`);
+      }
+      if (raw && !contentType.includes("application/json")) {
+        // Some APIs return 204 No Content; if there's content but not JSON, surface it
+        const preview = raw.slice(0, 200);
+        throw new Error(`Expected JSON but got "${contentType}". First 200 chars: ${preview}`);
       }
 
+      // optimistic remove from available list
       setData((prev) => prev.filter((t) => t.id !== id));
       setOpenTask(null);
     } catch (e) {
       console.error("POST /errand/Accept error:", e);
-      setUiError("Couldn’t accept this task. Please try again.");
+      setUiError(e?.message || "Couldn’t accept this task. Please try again.");
     }
   };
-
 
   const openMap = (task) => {
     if (task.lat != null && task.lng != null) {
@@ -276,10 +352,11 @@ export default function AvailableTasks() {
             <button
               key={f}
               onClick={() => setActiveFilter(f)}
-              className={`px-3.5 py-1.5 rounded-full text-[13px] font-medium transition ${activeFilter === f
+              className={`px-3.5 py-1.5 rounded-full text-[13px] font-medium transition ${
+                activeFilter === f
                   ? "bg-blue-600 text-white shadow-sm"
                   : "bg-slate-100 text-slate-700 hover:bg-slate-200"
-                }`}
+              }`}
             >
               {f}
             </button>
@@ -290,7 +367,7 @@ export default function AvailableTasks() {
       <ErrorBanner message={uiError} onClose={() => setUiError(null)} />
 
       {loading && <div className="text-slate-500 text-sm">Loading errands…</div>}
-      {error && <div className="text-red-600 text-sm">Error: {error}</div>}
+      {error && <div className="text-red-600 text-sm">Error: {String(error)}</div>}
 
       {!loading && !error && (
         <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
@@ -317,10 +394,11 @@ export default function AvailableTasks() {
           <>
             <div className="mb-4 flex items-start justify-between">
               <span
-                className={`text-[11px] font-semibold px-2.5 py-1 rounded-full ${STATUS[openTask.statusKey].badge
-                  }`}
+                className={`text-[11px] font-semibold px-2.5 py-1 rounded-full ${
+                  STATUS[openTask.statusKey]?.badge || STATUS.pending.badge
+                }`}
               >
-                {STATUS[openTask.statusKey].label}
+                {STATUS[openTask.statusKey]?.label || STATUS.pending.label}
               </span>
               <div className="inline-flex items-center gap-2 rounded-xl bg-emerald-50 ring-1 ring-emerald-100 px-3.5 py-2">
                 <IndianRupee className="w-4 h-4 text-emerald-700" />

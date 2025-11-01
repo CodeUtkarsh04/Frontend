@@ -21,13 +21,16 @@ import StepToStartHelper from "./Components/StepToStartHelper.jsx";
 import HelperLandLayout from "./Pages/HelperLandLayout.jsx";
 import HelperDashboard from "./Pages/HelperDashboard.jsx";
 import HelperDashLayout from "./Pages/HelperDashLayout.jsx";
-import AvailableTasks from "./Components/AvailableTasks.jsx";
 import UserDashLayout from "./Pages/UserDashLayout.jsx";
 import FaqHelper from "./Pages/FaqHelper.jsx";
 import ProtectedRoute from "./Pages/ProtectedRoute";
 import CompleteProfile from "./Pages/CompleteProfile.jsx";
 import ProfileSetupNotice from "./Pages/ProfileSetupNotice.jsx";
 import Profile from "./Pages/Profile.jsx";
+import HelperTaskPage from "./Components/HelperTaskPage.jsx";
+import CommunityGuidelines from "./Pages/CommunityGuidelines.jsx";
+import TermsAndConditions from "./Pages/TermsAndConditions.jsx";
+import PrivacyPolicy from "./Pages/PrivacyPolicy.jsx";
 
 export default function App() {
   return (
@@ -43,6 +46,10 @@ export default function App() {
         <Route path="about" element={<AboutDailyDone />} />
         <Route path="help" element={<HelpPage />} />
         <Route path="recent-tasks" element={<UserTasksPage />} />
+        <Route path="community-guidelines" element={<CommunityGuidelines />} />
+        <Route path="terms" element={<TermsAndConditions />} />
+        <Route path="privacy" element={<PrivacyPolicy />} />
+  
       </Route>
 
       {/* Auth (public) — ONLY signup/login under AuthLayout */}
@@ -105,7 +112,7 @@ export default function App() {
         }
       >
         <Route index element={<HelperDashboard />} />
-        <Route path="available-tasks" element={<AvailableTasks />} />
+        <Route path="tasks" element={<HelperTaskPage />} />
          <Route path="profile" element={<Profile />} />
       </Route>
 

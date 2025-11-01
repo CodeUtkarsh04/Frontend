@@ -1,12 +1,10 @@
 import React from "react";
 
 import StepToStartHelper from "../Components/StepToStartHelper";
-import AvailableTasks from "../Components/AvailableTasks";
-import Footer from "../Components/Footer";
 import HelperSignUpCard from "../Components/HelperSignupCard";
 import WhyHelperGrid from "../Components/WhyHelperGrid";
 import HelperLandingNavbar from "../Components/HelperLandingNavbar";
-import HelperHeroSection from "../Components/HelperHeroSection";
+
 
 function App() {
   return (

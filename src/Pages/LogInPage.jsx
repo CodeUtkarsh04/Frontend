@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { setAuth, fetchMe } from "../auth"
+import { setAuth, fetchMe, isLikelyJWT, clearAuth } from "../auth"
 
 export default function LogInPage({ mode = "user" }) {
   const navigate = useNavigate();
@@ -73,12 +73,32 @@ export default function LogInPage({ mode = "user" }) {
     }
 
     // Normalize output to { token, user }
+    let token = null;
+    let user = null;
+
     if (typeof body === "string") {
-      const token = body.trim();
-      return { token, user: null, raw: body };
+      token = body.trim();
+    } else if (body && typeof body === "object") {
+      // If server encodes failures inside 200s, try to detect them
+      const looksLikeFailure =
+        body.success === false ||
+        /wrong credential|invalid|failed/i.test(body.message || "") ||
+        /wrong credential|invalid|failed/i.test(body.error || "");
+
+      if (looksLikeFailure) {
+        throw new Error(body.message || body.error || "Invalid credentials.");
+      }
+
+      token = body.token || body.accessToken || body.jwt || null;
+      user = body.user || body.data?.user || null;
     }
-    const token = body?.token || body?.accessToken || body?.jwt || null;
-    const user = body?.user || body?.data?.user || null;
+
+    if (!isLikelyJWT(token)) {
+      // If your auth is cookie-based (no JWT in body), you could relax this
+      // and rely on /auth/me below. For now, block obvious junk.
+      throw new Error("Invalid email or password.");
+    }
+
     return { token, user, raw: body };
   };
 
@@ -97,19 +117,17 @@ export default function LogInPage({ mode = "user" }) {
       const res = await loginApiCall(email.trim(), password);
       if (!res?.token) throw new Error("No token in response.");
 
-      // Save what we have right now
-      let role = res?.user?.role || null;
-      console.log('Login response:', res);
-      console.log('Initial role:', role);
-      setAuth({ token: res.token, role, user: res.user || null });
+      // Tentatively store token, but don't navigate yet
+      setAuth({ token: res.token }); // role/user only after verification
 
-      // If role wasn't returned by login, try to fetch it (/auth/me or decode JWT)
+      // Must verify identity from backend
+      const me = await fetchMe(); // calls /auth/me with Bearer token
+      const role = me?.role || me?.user?.role || null;
       if (!role) {
-        const me = await fetchMe();
-        role = me?.role || 'user'; // Default to 'user' if no role found
-        console.log('Fetched role:', role);
-        setAuth({ token: res.token, role, user: me?.user || null });
+        clearAuth();
+        throw new Error("Login failed to verify. Please check your credentials.");
       }
+      setAuth({ token: res.token, role, user: me?.user || res?.user || null });
 
       console.log('Final role before navigation:', role);
       console.log('Token in localStorage:', localStorage.getItem('token'));
@@ -137,14 +155,7 @@ export default function LogInPage({ mode = "user" }) {
       setLoading(false);
     }
   };
-
-
-
-  const handleForgotPassword = (e) => {
-    e.preventDefault();
-    setMessage({ type: "success", text: "Password reset link sent!" });
-  };
-
+  
   return (
     <div className="min-h-screen flex items-center justify-center p-6 ">
       <div className="w-full max-w-sm bg-white rounded-2xl shadow-xl p-6 sm:p-8 md:p-12">
@@ -228,11 +239,11 @@ export default function LogInPage({ mode = "user" }) {
                 Password must be at least 6 characters.
               </p>
             )}
-            <div className="text-right mt-2">
+            {/* <div className="text-right mt-2">
               <a href="#" onClick={handleForgotPassword} className="text-sm text-indigo-600 hover:underline">
                 Forgot your password?
               </a>
-            </div>
+            </div> */}
           </div>
 
           {/* Button */}

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+  import React, { useEffect, useRef } from "react";
 
 export default function Modal({ open, onClose, children, className = "" }) {
   const backdropRef = useRef(null);

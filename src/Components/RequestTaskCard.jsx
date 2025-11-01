@@ -3,11 +3,30 @@ import { useState, useEffect, useRef } from "react";
 /* ===== Map-only changes start ===== */
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import iconUrl from "leaflet/dist/images/marker-icon.png";
-import iconRetinaUrl from "leaflet/dist/images/marker-icon-2x.png";
-import shadowUrl from "leaflet/dist/images/marker-shadow.png";
-L.Icon.Default.mergeOptions({ iconUrl, iconRetinaUrl, shadowUrl });
-/* ===== Map-only changes end ===== */
+
+// ✅ proper paths for Vite / React builds
+import markerIcon2x from "leaflet/dist/images/marker-icon-2x.png";
+import markerIcon from "leaflet/dist/images/marker-icon.png";
+import markerShadow from "leaflet/dist/images/marker-shadow.png";
+
+// ✅ Create explicit default icon (Vite-safe)
+const defaultMarkerIcon = L.icon({
+  iconUrl: new URL(markerIcon, import.meta.url).href,
+  iconRetinaUrl: new URL(markerIcon2x, import.meta.url).href,
+  shadowUrl: new URL(markerShadow, import.meta.url).href,
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41],
+});
+
+// ✅ Force Leaflet to use it globally
+L.Marker.prototype.options.icon = defaultMarkerIcon;
+
+console.log("Leaflet icon paths:", defaultMarkerIcon);
+
+
+
 
 function RequestTaskCard({ variant = "default" }) {
   const [formData, setFormData] = useState({
@@ -102,6 +121,7 @@ function RequestTaskCard({ variant = "default" }) {
 
   /* ===== Map-only changes start ===== */
   // init leaflet map (once)
+  // init leaflet map (once)
   const initMap = () => {
     if (!mapRef.current || mapInstance.current) return;
 
@@ -115,11 +135,31 @@ function RequestTaskCard({ variant = "default" }) {
       attribution: "© OpenStreetMap contributors",
     }).addTo(map);
 
+    // add a default marker at the center (Mumbai) using the explicit icon
+    markerRef.current = L.marker([defaultLocation.lat, defaultLocation.lng], { icon: defaultMarkerIcon }).addTo(map);
+    setSelectedCoords({ lat: defaultLocation.lat, lng: defaultLocation.lng });
+
+    // try to populate the location field if empty (non-blocking)
+    reverseGeocode(defaultLocation.lat, defaultLocation.lng).then((addr) => {
+      if (addr) {
+        setFormData((prev) => {
+          if (!prev.location) return { ...prev, location: addr };
+          return prev;
+        });
+        try { markerRef.current.bindPopup(addr); } catch { }
+      }
+    });
+
+    // click handler — replaces marker and reverse-geocodes
     map.on("click", async (e) => {
       const { lat, lng } = e.latlng;
 
-      if (markerRef.current) map.removeLayer(markerRef.current);
-      markerRef.current = L.marker([lat, lng]).addTo(map);
+      if (markerRef.current) {
+        try { map.removeLayer(markerRef.current); } catch { }
+      }
+
+      // add new marker at clicked location
+      markerRef.current = L.marker([lat, lng], { icon: defaultMarkerIcon }).addTo(map);
 
       setSelectedCoords({ lat, lng });
 
@@ -141,6 +181,7 @@ function RequestTaskCard({ variant = "default" }) {
       } catch { }
     });
   };
+
   /* ===== Map-only changes end ===== */
 
   // get browser location
@@ -162,7 +203,7 @@ function RequestTaskCard({ variant = "default" }) {
             mapInstance.current.removeLayer(markerRef.current);
           }
           /* ===== Map-only change: window.L → L ===== */
-          markerRef.current = L.marker([lat, lng]).addTo(mapInstance.current);
+          markerRef.current = L.marker([lat, lng], { icon: defaultMarkerIcon }).addTo(mapInstance.current || map);
 
           const address = await reverseGeocode(lat, lng);
 
@@ -449,15 +490,24 @@ function RequestTaskCard({ variant = "default" }) {
                     type="text"
                     name="location"
                     value={formData.location}
-                    onChange={handleInputChange}
-                    className="flex-1 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring focus:ring-blue-100 focus:border-blue-600  focus:bg-white transition-all duration-200 text-base"
-                    placeholder="Enter your area or full address"
-                    required
+                    readOnly
+                    // when user focuses or clicks, open the map so they know how to set it
+                    onFocus={() => setShowMap(true)}
+                    onMouseDown={(e) => {
+                      // prevent caret/click selection visual (keeps field focusable for a11y)
+                      e.preventDefault();
+                      setShowMap(true);
+                    }}
+                    onPaste={(e) => e.preventDefault()}
+                    aria-describedby="location-help"
+                    title="Select location from the map (click the pin or use 'Use My Location')"
+                    className="flex-1 px-3 py-2 bg-gray-100 border border-gray-200 rounded-lg cursor-not-allowed focus:outline-none focus:ring focus:ring-blue-100 focus:border-blue-600 transition-all duration-200 text-base"
+                    placeholder="Select your location from the map"
                   />
                   <button
                     type="button"
                     onClick={() => setShowMap((v) => !v)}
-                     className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center"
+                    className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center"
                   >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
@@ -465,6 +515,10 @@ function RequestTaskCard({ variant = "default" }) {
                     </svg>
                   </button>
                 </div>
+
+                <p id="location-help" className="mt-2 text-xs text-gray-500">
+                  Select your area on the map. Click the map pin or use “Use My Location”.
+                </p>
 
                 {showMap && (
                   <div className="bg-gray-50 rounded-lg border border-gray-200 p-2">
