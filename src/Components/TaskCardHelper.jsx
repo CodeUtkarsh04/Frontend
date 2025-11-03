@@ -271,7 +271,7 @@ export default function TaskCardHelper({ task, autoOpen = false, onRequestClose 
     if (!canCancel || busyCancel) return;
 
     showConfirm({
-      message: "Are you sure you want to cancel this errand?",
+      message: "Are you sure you don't want to do this errand?",
       onConfirm: async () => {
         setConfirmState(s => ({ ...s, busy: true }));
         try {

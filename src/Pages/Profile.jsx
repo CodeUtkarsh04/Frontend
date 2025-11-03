@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+
 const BASE_URL = import.meta.env.VITE_API_BASE_URL;
-
-
 
 // Skeleton loaders
 const SkeletonLine = ({ className = "" }) => (
@@ -59,15 +59,21 @@ const ProfilePage = () => {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const navigate = useNavigate();
 
   // initials generator
   const getInitials = (name) => {
     if (!name) return "??";
     const parts = name.trim().split(" ");
-    if (parts.length === 1) return parts[0][0].toUpperCase(); // single name case
+    if (parts.length === 1) return parts[0][0].toUpperCase();
     return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
   };
 
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    navigate("/login");
+  };
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -76,27 +82,22 @@ const ProfilePage = () => {
         const token = localStorage.getItem("token");
         if (!token) throw new Error("No auth token found");
 
-        const res = await fetch(
-          `${BASE_URL}/profile/getProfile`,
-          {
-            method: "GET",
-            headers: {
-              Accept: "application/json",
-              Authorization: `Bearer ${token}`,
-              "ngrok-skip-browser-warning": "true",
-            },
-          }
-        );
+        const res = await fetch(`${BASE_URL}/profile/getProfile`, {
+          method: "GET",
+          headers: {
+            Accept: "application/json",
+            Authorization: `Bearer ${token}`,
+            "ngrok-skip-browser-warning": "true",
+          },
+        });
 
         if (!res.ok) {
           throw new Error(`HTTP ${res.status}`);
         }
 
         const data = await res.json();
-
         setProfile(data);
       } catch (e) {
-
         setError(e.message);
       } finally {
         setLoading(false);
@@ -105,6 +106,19 @@ const ProfilePage = () => {
 
     fetchProfile();
   }, []);
+
+  const confirmLogout = () => {
+    setShowLogoutModal(false);
+    handleLogout();
+  };
+
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key === "Escape") setShowLogoutModal(false);
+    };
+    if (showLogoutModal) window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [showLogoutModal]);
 
   const fullName = profile?.name || "";
   const age = profile?.age;
@@ -115,6 +129,7 @@ const ProfilePage = () => {
   const totalEarnings = profile?.earning;
   const helpedOthers = profile?.taskAccepted;
   const tasksRequested = profile?.taskPosted;
+
   const formatDate = (isoString) => {
     if (!isoString) return "—";
     const d = new Date(isoString);
@@ -133,21 +148,26 @@ const ProfilePage = () => {
     }).format(num);
   };
 
-
-
-
-
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="h-[73px]" aria-hidden="true" />
 
       {/* Hero */}
       <section
-        className="text-white"
+        className="text-white relative"
         style={{
           background: "linear-gradient(135deg,#1e40af 0%,#0ea5e9 100%)",
         }}
       >
+        <button
+          onClick={() => setShowLogoutModal(true)}
+          aria-label="Log out"
+          disabled={loading}
+          className="absolute top-6 right-6 z-20 bg-white text-blue-700 font-semibold px-4 py-2 rounded-xl shadow hover:bg-blue-50 transition disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          Log Out
+        </button>
+
         <div
           className="max-w-5xl mx-auto px-6 text-center"
           style={{ paddingTop: "180px", paddingBottom: "96px" }}
@@ -247,8 +267,10 @@ const ProfilePage = () => {
                   Contact
                 </h3>
                 <div className="space-y-3">
-                  <Field label="Phone Number" value={phone ? `+91 ${phone}` : ""} />
-
+                  <Field
+                    label="Phone Number"
+                    value={phone ? `+91 ${phone}` : ""}
+                  />
                   <Field label="Email" value={email} />
                 </div>
               </div>
@@ -272,6 +294,50 @@ const ProfilePage = () => {
           </div>
         </div>
       </section>
+
+      {/* Logout Modal */}
+      {showLogoutModal && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center">
+          <div
+            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+            onClick={() => setShowLogoutModal(false)}
+            aria-hidden="true"
+          />
+          <div className="relative w-full max-w-md mx-4 bg-white rounded-2xl shadow-2xl overflow-hidden">
+            <div className="p-6">
+              <div className="flex items-start justify-between">
+                <h3 className="text-lg font-bold text-gray-900">Confirm</h3>
+                <button
+                  onClick={() => setShowLogoutModal(false)}
+                  aria-label="Close"
+                  className="text-gray-400 hover:text-gray-600 p-1 rounded"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <p className="mt-2 text-sm text-gray-600">
+                Are you sure you want to log out?
+              </p>
+
+              <div className="mt-6 flex items-center gap-3 justify-end">
+                <button
+                  onClick={() => setShowLogoutModal(false)}
+                  className="px-4 py-2 rounded-full border border-gray-200 text-sm text-gray-700 hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmLogout}
+                  className="px-4 py-2 rounded-full bg-rose-600 text-white text-sm font-semibold shadow hover:bg-rose-700"
+                >
+                  OK
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
