@@ -136,7 +136,7 @@ const STATUS = {
 };
 
 const nfINR = new Intl.NumberFormat("en-IN", { maximumFractionDigits: 0 });
-const formatINR = (v) => `${nfINR.format(Number(v || 0))}`;
+const formatINR = (v) => `₹ ${nfINR.format(Number(v || 0))}`;
 const formatDate = (iso) =>
   iso ? new Date(iso).toLocaleDateString("en-IN", { day: "2-digit", month: "2-digit", year: "numeric" }) : "-";
 

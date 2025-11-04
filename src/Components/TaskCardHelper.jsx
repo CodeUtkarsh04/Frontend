@@ -146,7 +146,7 @@ const STATUS = {
 };
 
 const nfINR = new Intl.NumberFormat("en-IN", { maximumFractionDigits: 0 });
-const formatINR = (v) => `${nfINR.format(Number(v || 0))}`;
+const formatINR = (v) => `₹ ${nfINR.format(Number(v || 0))}`;
 const formatDate = (iso) =>
   iso ? new Date(iso).toLocaleDateString("en-IN", { day: "2-digit", month: "2-digit", year: "numeric" }) : "-";
 
@@ -354,7 +354,7 @@ export default function TaskCardHelper({ task, autoOpen = false, onRequestClose 
             <MapPin className="w-4 h-4" /> {t.location}
           </span>
           <span className="inline-flex items-center gap-1.5">
-            <IndianRupee className="w-4 h-4" /> {formatINR(t.budget)}
+            {formatINR(t.budget)}
           </span>
           <span className="inline-flex items-center gap-1.5 text-slate-600">
             <Calendar className="w-4 h-4" /> {formatDate(t.createdAt)}
@@ -386,7 +386,7 @@ export default function TaskCardHelper({ task, autoOpen = false, onRequestClose 
             <Row label="Category"><Package className="w-4 h-4" /> {t.category}</Row>
             <Row label="Pickup Location" full><MapPin className="w-4 h-4" /> {t.location}</Row>
             <Row label="Created"><Calendar className="w-4 h-4" /> {formatDate(t.createdAt)}</Row>
-            <Row label="Budget"><IndianRupee className="w-4 h-4" /> {formatINR(t.budget)}</Row>
+            <Row label="Budget"> {formatINR(t.budget)}</Row>
             {t.urgency && <Row label="Urgency">{String(t.urgency).toUpperCase()}</Row>}
             <Row label="Status">
               <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${theme.badge}`}>
