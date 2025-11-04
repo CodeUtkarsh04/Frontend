@@ -163,7 +163,7 @@ const ProfilePage = () => {
           onClick={() => setShowLogoutModal(true)}
           aria-label="Log out"
           disabled={loading}
-          className="absolute top-6 right-6 z-20 bg-white text-blue-700 font-semibold px-4 py-2 rounded-xl shadow hover:bg-blue-50 transition disabled:opacity-50 disabled:cursor-not-allowed"
+          className="absolute top-6 right-6 z-20 bg-white text-blue-700 font-semibold px-4 py-2 rounded-xl shadow hover:bg-blue-50 transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
         >
           Log Out
         </button>
@@ -323,13 +323,13 @@ const ProfilePage = () => {
               <div className="mt-6 flex items-center gap-3 justify-end">
                 <button
                   onClick={() => setShowLogoutModal(false)}
-                  className="px-4 py-2 rounded-full border border-gray-200 text-sm text-gray-700 hover:bg-gray-50"
+                  className="px-4 py-2 rounded-full border border-gray-200 text-sm text-gray-700 cursor-pointer hover:bg-gray-50"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={confirmLogout}
-                  className="px-4 py-2 rounded-full bg-rose-600 text-white text-sm font-semibold shadow hover:bg-rose-700"
+                  className="px-4 py-2 rounded-full bg-rose-600 text-white text-sm font-semibold shadow cursor-pointer  hover:bg-rose-700"
                 >
                   OK
                 </button>
