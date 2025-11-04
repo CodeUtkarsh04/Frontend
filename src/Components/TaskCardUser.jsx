@@ -488,7 +488,6 @@ export default function TaskCardUser({
           </span>
           <span className="hidden sm:inline-block w-1 h-1 rounded-full bg-slate-300" />
           <span className="inline-flex items-center gap-1.5">
-            <IndianRupee className="w-4 h-4" />
             {formatINR(t.budget)}
           </span>
           <span className="hidden sm:inline-block w-1 h-1 rounded-full bg-slate-300" />
