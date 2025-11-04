@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { LogOut, Users, ListTodo, Star, IndianRupee, User, Smartphone } from "lucide-react";
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -34,7 +35,7 @@ const StatCard = ({ label, value, loading }) => (
   <div
     className="rounded-2xl p-6 text-center"
     style={{
-      width: "260px",
+      width: "160px",
       background: "rgba(255,255,255,.12)",
       border: "1px solid rgba(255,255,255,.35)",
     }}
@@ -54,6 +55,63 @@ const StatCard = ({ label, value, loading }) => (
     )}
   </div>
 );
+
+// --- Rating helpers & UI ---
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+
+const getRatingColorClasses = (rating) => {
+  if (!rating || rating === 0)
+    return {
+      text: "text-white",
+      bg: "bg-white/10",
+      border: "border-white/30",
+      star: "text-white",
+    };
+
+  if (rating <= 2.0)
+    return {
+      text: "text-rose-600",
+      bg: "bg-rose-50",
+      border: "border-rose-100",
+      star: "text-rose-600",
+    };
+
+  if (rating <= 3.5)
+    return {
+      text: "text-amber-500",
+      bg: "bg-amber-50",
+      border: "border-amber-100",
+      star: "text-amber-500",
+    };
+
+  return {
+    text: "text-emerald-600",
+    bg: "bg-emerald-50",
+    border: "border-emerald-100",
+    star: "text-emerald-600",
+  };
+};
+
+const formatRating = (raw) => {
+  const r = Number.isFinite(raw) ? Number(raw) : 0;
+  const clamped = Math.round(clamp(r, 0, 5) * 10) / 10;
+  return Number.isInteger(clamped) ? `${clamped}` : `${clamped.toFixed(1)}`;
+};
+
+const RatingBadge = ({ rating = 0 }) => {
+  const classes = getRatingColorClasses(rating);
+  const display = formatRating(rating);
+
+  return (
+    <div className="flex items-baseline justify-center gap-1">
+      <span className={`text-xl ${classes.star}`}></span>
+      <span className={`text-2xl font-extrabold ${classes.text}`}>{display}</span>
+    </div>
+  );
+};
+
+
+
 
 const ProfilePage = () => {
   const [profile, setProfile] = useState(null);
@@ -96,7 +154,13 @@ const ProfilePage = () => {
         }
 
         const data = await res.json();
-        setProfile(data);
+        const safeRating = (() => {
+          const r = data?.rating ?? data?.Rating ?? 0;
+          const num = Number(r);
+          return Number.isFinite(num) ? Math.max(0, Math.min(5, num)) : 0;
+        })();
+        setProfile({ ...data, rating: safeRating });
+
       } catch (e) {
         setError(e.message);
       } finally {
@@ -154,92 +218,217 @@ const ProfilePage = () => {
 
       {/* Hero */}
       <section
-        className="text-white relative"
+        className="relative overflow-hidden text-white"
         style={{
-          background: "linear-gradient(135deg,#1e40af 0%,#0ea5e9 100%)",
+          background: "linear-gradient(135deg, #1e40af 0%, #0ea5e9 100%)",
         }}
       >
+        {/* Animated gradient orbs */}
+        <div
+          className="absolute -top-32 -left-32 w-96 h-96 rounded-full opacity-30 blur-3xl"
+          style={{
+            background: "radial-gradient(circle, rgba(255,255,255,0.3) 0%, transparent 70%)",
+            animation: "float 8s ease-in-out infinite",
+          }}
+        />
+        <div
+          className="absolute top-20 -right-20 w-80 h-80 rounded-full opacity-20 blur-3xl"
+          style={{
+            background: "radial-gradient(circle, rgba(255,255,255,0.25) 0%, transparent 70%)",
+            animation: "float 10s ease-in-out infinite reverse",
+          }}
+        />
+        <div
+          className="absolute -bottom-20 left-1/3 w-72 h-72 rounded-full opacity-25 blur-3xl"
+          style={{
+            background: "radial-gradient(circle, rgba(255,255,255,0.2) 0%, transparent 70%)",
+            animation: "float 12s ease-in-out infinite",
+          }}
+        />
+
+        {/* Decorative grid pattern */}
+        <div
+          className="absolute inset-0 opacity-5"
+          style={{
+            backgroundImage: `linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px),
+                              linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)`,
+            backgroundSize: "50px 50px",
+          }}
+        />
+
+        {/* Logout button with enhanced styling */}
         <button
           onClick={() => setShowLogoutModal(true)}
           aria-label="Log out"
           disabled={loading}
-          className="absolute top-6 right-6 z-20 bg-white text-blue-700 font-semibold px-4 py-2 rounded-xl shadow hover:bg-blue-50 transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+          className="absolute top-6 right-6 z-20 flex items-center gap-2 bg-white/95 backdrop-blur-sm text-purple-700 font-semibold px-5 py-2.5 rounded-full shadow-lg hover:shadow-xl hover:bg-white transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          Log Out
+          <LogOut className="w-4 h-4" />
+          <span className="text-sm">Log Out</span>
         </button>
 
-        <div
-          className="max-w-5xl mx-auto px-6 text-center"
-          style={{ paddingTop: "180px", paddingBottom: "96px" }}
-        >
-          {/* Avatar */}
-          <div
-            className="mx-auto mb-6 flex items-center justify-center text-4xl font-extrabold select-none"
-            style={{
-              width: "112px",
-              height: "112px",
-              borderRadius: "50%",
-              background: "rgba(255,255,255,0.15)",
-              border: "4px solid rgba(255,255,255,0.35)",
-              boxShadow: "0 8px 32px rgba(0,0,0,0.15)",
-            }}
-          >
-            {loading && !fullName ? (
-              <SkeletonCircle size={112} />
-            ) : fullName ? (
-              getInitials(fullName)
-            ) : (
-              "??"
-            )}
+        <div className="max-w-5xl mx-auto px-4 text-center py-16 md:py-24 relative z-10">
+          {/* Enhanced avatar with glow effect */}
+          <div className="relative inline-block mb-6">
+            <div
+              className="absolute inset-0 rounded-full blur-2xl opacity-40"
+              style={{
+                background: "radial-gradient(circle, rgba(255,255,255,0.8) 0%, transparent 70%)",
+                transform: "scale(1.2)",
+              }}
+            />
+            <div
+              className="relative mx-auto flex items-center justify-center text-3xl md:text-4xl font-extrabold select-none rounded-full shadow-2xl"
+              style={{
+                width: 120,
+                height: 120,
+                background: "linear-gradient(135deg, rgba(255,255,255,0.25) 0%, rgba(255,255,255,0.1) 100%)",
+                border: "4px solid rgba(255,255,255,0.4)",
+                backdropFilter: "blur(10px)",
+              }}
+            >
+              {loading && !fullName ? (
+                <SkeletonCircle size={100} />
+              ) : fullName ? (
+                getInitials(fullName)
+              ) : (
+                "??"
+              )}
+            </div>
           </div>
 
-          {/* Name */}
+          {/* Name with enhanced typography */}
           {loading && !fullName ? (
-            <SkeletonLine className="h-8 w-60 mx-auto" />
+            <SkeletonLine className="h-8 w-64 mx-auto" />
           ) : (
-            <h1 className="text-4xl font-extrabold">{fullName || "—"}</h1>
+            <h1 className="text-3xl md:text-5xl font-extrabold tracking-tight leading-tight mb-3" style={{
+              textShadow: "0 2px 20px rgba(0,0,0,0.15)",
+            }}>
+              {fullName || "—"}
+            </h1>
           )}
 
-          {/* Meta */}
+          {/* Meta info with icons */}
           {loading ? (
-            <SkeletonLine className="h-4 w-72 mx-auto mt-3 opacity-80" />
+            <SkeletonLine className="h-5 w-72 mx-auto mt-3" />
           ) : (
-            <p className="mt-2 text-sm opacity-95">
-              {age ? `Age: ${age} years • ` : ""} {phone ? `+91 ${phone}` : ""}
-            </p>
+            <div className="flex items-center justify-center gap-3 text-sm md:text-base opacity-95 mb-10">
+              {age && (
+                <span className="flex items-center gap-1.5 bg-white/15 px-3 py-1.5 rounded-full">
+                  <User className="w-4 h-4 text-white" />
+                  <span>{age} years</span>
+                </span>
+              )}
+              {phone && (
+                <span className="flex items-center gap-1.5 bg-white/15 px-3 py-1.5 rounded-full">
+                  <Smartphone className="w-4 h-4 text-white" />
+                  <span>+91 {phone}</span>
+                </span>
+              )}
+            </div>
           )}
 
-          {/* Stats */}
-          <div className="mt-8 flex flex-wrap justify-center gap-6">
-            <StatCard
-              label="Total Earnings"
-              value={formatCurrency(totalEarnings)}
-              loading={loading}
-            />
 
-            <StatCard
-              label="Helped Others"
-              value={helpedOthers}
-              loading={loading}
-            />
-            <StatCard
-              label="Tasks Requested"
-              value={tasksRequested}
-              loading={loading}
-            />
+          {/* Enhanced stats grid */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto">
+            <div className="group relative p-6 rounded-2xl backdrop-blur-md transition-all duration-300 hover:transform hover:scale-105 hover:shadow-2xl" style={{
+              background: "linear-gradient(135deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0.05) 100%)",
+              border: "1px solid rgba(255,255,255,0.25)",
+            }}>
+              <div className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" style={{
+                background: "linear-gradient(135deg, rgba(255,255,255,0.1) 0%, transparent 100%)",
+              }} />
+              <div className="relative">
+                <div className="flex justify-center mb-2">
+                  <div className="p-2.5 rounded-full bg-white/20">
+                    <IndianRupee className="w-5 h-5 text-white" />
+                  </div>
+                </div>
+                <div className="text-2xl md:text-3xl font-bold mb-1">{formatCurrency(totalEarnings)}</div>
+                <div className="text-[10px] uppercase tracking-widest opacity-90 font-semibold">Total Earnings</div>
+              </div>
+            </div>
+
+            <div className="group relative p-6 rounded-2xl backdrop-blur-md transition-all duration-300 hover:transform hover:scale-105 hover:shadow-2xl" style={{
+              background: "linear-gradient(135deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0.05) 100%)",
+              border: "1px solid rgba(255,255,255,0.25)",
+            }}>
+              <div className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" style={{
+                background: "linear-gradient(135deg, rgba(255,255,255,0.1) 0%, transparent 100%)",
+              }} />
+              <div className="relative">
+                <div className="flex justify-center mb-2">
+                  <div className="p-2.5 rounded-full bg-white/20">
+                    <Users className="w-5 h-5 text-white" />
+                  </div>
+                </div>
+                <div className="text-2xl md:text-3xl font-bold mb-1">{helpedOthers ?? 0}</div>
+                <div className="text-[10px] uppercase tracking-widest opacity-90 font-semibold">Helped Others</div>
+              </div>
+            </div>
+
+            <div className="group relative p-6 rounded-2xl backdrop-blur-md transition-all duration-300 hover:transform hover:scale-105 hover:shadow-2xl" style={{
+              background: "linear-gradient(135deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0.05) 100%)",
+              border: "1px solid rgba(255,255,255,0.25)",
+            }}>
+              <div className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" style={{
+                background: "linear-gradient(135deg, rgba(255,255,255,0.1) 0%, transparent 100%)",
+              }} />
+              <div className="relative">
+                <div className="flex justify-center mb-2">
+                  <div className="p-2.5 rounded-full bg-white/20">
+                    <ListTodo className="w-5 h-5 text-white" />
+                  </div>
+                </div>
+                <div className="text-2xl md:text-3xl font-bold mb-1">{tasksRequested ?? 0}</div>
+                <div className="text-[10px] uppercase tracking-widest opacity-90 font-semibold">Tasks Requested</div>
+              </div>
+            </div>
+
+            <div className="group relative p-6 rounded-2xl backdrop-blur-md transition-all duration-300 hover:transform hover:scale-105 hover:shadow-2xl" style={{
+              background: "linear-gradient(135deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0.05) 100%)",
+              border: "1px solid rgba(255,255,255,0.25)",
+            }}>
+              <div className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" style={{
+                background: "linear-gradient(135deg, rgba(255,255,255,0.1) 0%, transparent 100%)",
+              }} />
+              <div className="relative">
+                <div className="flex justify-center mb-2">
+                  <div className="p-2.5 rounded-full bg-white/20">
+                    <Star className="w-5 h-5 text-white" />
+                  </div>
+                </div>
+                <div className="text-2xl md:text-3xl font-bold mb-1">
+                  <RatingBadge rating={profile?.rating ?? 0} />
+                </div>
+                <div className="text-[10px] uppercase tracking-widest opacity-90 font-semibold">Rating</div>
+              </div>
+            </div>
           </div>
 
-          {/* Error */}
+          {/* Error message with enhanced styling */}
           {error && (
-            <div className="mt-6">
-              <div className="inline-flex items-center gap-2 rounded-lg bg-white/15 px-4 py-2 text-sm">
-                <span className="font-semibold">Couldn’t load profile:</span>
+            <div className="mt-6 animate-pulse">
+              <div className="inline-flex items-center gap-2 rounded-full bg-red-500/20 backdrop-blur-sm border border-red-300/30 px-5 py-2.5 text-sm shadow-lg">
+                <span className="text-xl">⚠️</span>
+                <span className="font-semibold">Couldn't load profile:</span>
                 <span>{error}</span>
               </div>
             </div>
           )}
         </div>
+
+        {/* Animated CSS */}
+        <style>{`
+          @keyframes float {
+            0%, 100% { transform: translateY(0) translateX(0); }
+            50% { transform: translateY(-20px) translateX(10px); }
+          }
+        `}</style>
       </section>
+
+
+
 
       {/* Info */}
       <section className="py-12">
