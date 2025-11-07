@@ -59,38 +59,6 @@ const StatCard = ({ label, value, loading }) => (
 // --- Rating helpers & UI ---
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
-const getRatingColorClasses = (rating) => {
-  if (!rating || rating === 0)
-    return {
-      text: "text-white",
-      bg: "bg-white/10",
-      border: "border-white/30",
-      star: "text-white",
-    };
-
-  if (rating <= 2.0)
-    return {
-      text: "text-rose-600",
-      bg: "bg-rose-50",
-      border: "border-rose-100",
-      star: "text-rose-600",
-    };
-
-  if (rating <= 3.5)
-    return {
-      text: "text-amber-500",
-      bg: "bg-amber-50",
-      border: "border-amber-100",
-      star: "text-amber-500",
-    };
-
-  return {
-    text: "text-emerald-600",
-    bg: "bg-emerald-50",
-    border: "border-emerald-100",
-    star: "text-emerald-600",
-  };
-};
 
 const formatRating = (raw) => {
   const r = Number.isFinite(raw) ? Number(raw) : 0;
@@ -99,19 +67,14 @@ const formatRating = (raw) => {
 };
 
 const RatingBadge = ({ rating = 0 }) => {
-  const classes = getRatingColorClasses(rating);
   const display = formatRating(rating);
 
   return (
     <div className="flex items-baseline justify-center gap-1">
-      <span className={`text-xl ${classes.star}`}></span>
-      <span className={`text-2xl font-extrabold ${classes.text}`}>{display}</span>
+      <span className="text-2xl font-extrabold text-white">{display}</span>
     </div>
   );
 };
-
-
-
 
 const ProfilePage = () => {
   const [profile, setProfile] = useState(null);
@@ -154,13 +117,28 @@ const ProfilePage = () => {
         }
 
         const data = await res.json();
-        const safeRating = (() => {
-          const r = data?.rating ?? data?.Rating ?? 0;
+
+        // Normalize and extract both ratings (non-invasive)
+        const safeUserRating = (() => {
+          // prefer userBehaviour if available
+          const r =
+            data?.userBehaviour ??
+            data?.userRating ??
+            data?.userAvg ??
+            data?.ratings?.user ??
+            0;
           const num = Number(r);
           return Number.isFinite(num) ? Math.max(0, Math.min(5, num)) : 0;
         })();
-        setProfile({ ...data, rating: safeRating });
 
+
+        const safeHelperRating = (() => {
+          const r = data?.helperRating ?? data?.helperAvg ?? data?.ratings?.helper ?? data?.rating ?? 0;
+          const num = Number(r);
+          return Number.isFinite(num) ? Math.max(0, Math.min(5, num)) : 0;
+        })();
+
+        setProfile({ ...data, userRating: safeUserRating, helperRating: safeHelperRating });
       } catch (e) {
         setError(e.message);
       } finally {
@@ -183,6 +161,51 @@ const ProfilePage = () => {
     if (showLogoutModal) window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [showLogoutModal]);
+
+  // ---------- submitRating helper ----------
+  const submitRating = async (ratingValue, source = "helper") => {
+    // source: "helper"  => current user is helper rating this profile (backend should map this to target user's userRating)
+    // source: "user"    => current user is user rating this profile (backend should map this to target helper's helperRating)
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) throw new Error("No auth token");
+
+      const targetId = profile?._id || profile?.userid?._id || profile?.id;
+      if (!targetId) throw new Error("No target id");
+
+      const payload = { targetId, rating: Number(ratingValue), source }; // change keys if backend expects different
+
+      const res = await fetch(`${BASE_URL}/ratings`, {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const updated = await res.json();
+
+      // update local profile state using backend values if returned, otherwise fallback
+      setProfile((p) => ({
+        ...p,
+        userRating:
+          updated?.userRating ??
+          p.userRating ??
+          (source === "helper" ? Number(ratingValue) : p.userRating),
+        helperRating:
+          updated?.helperRating ??
+          p.helperRating ??
+          (source === "user" ? Number(ratingValue) : p.helperRating),
+      }));
+    } catch (err) {
+      console.error("submitRating error:", err);
+      alert("Could not submit rating: " + (err.message || ""));
+    }
+  };
+  // ---------- end submitRating helper ----------
 
   const fullName = profile?.name || "";
   const age = profile?.age;
@@ -330,25 +353,7 @@ const ProfilePage = () => {
 
 
           {/* Enhanced stats grid */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto">
-            <div className="group relative p-6 rounded-2xl backdrop-blur-md transition-all duration-300 hover:transform hover:scale-105 hover:shadow-2xl" style={{
-              background: "linear-gradient(135deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0.05) 100%)",
-              border: "1px solid rgba(255,255,255,0.25)",
-            }}>
-              <div className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" style={{
-                background: "linear-gradient(135deg, rgba(255,255,255,0.1) 0%, transparent 100%)",
-              }} />
-              <div className="relative">
-                <div className="flex justify-center mb-2">
-                  <div className="p-2.5 rounded-full bg-white/20">
-                    <IndianRupee className="w-5 h-5 text-white" />
-                  </div>
-                </div>
-                <div className="text-2xl md:text-3xl font-bold mb-1">{formatCurrency(totalEarnings)}</div>
-                <div className="text-[10px] uppercase tracking-widest opacity-90 font-semibold">Total Earnings</div>
-              </div>
-            </div>
-
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 max-w-5xl mx-auto">
             <div className="group relative p-6 rounded-2xl backdrop-blur-md transition-all duration-300 hover:transform hover:scale-105 hover:shadow-2xl" style={{
               background: "linear-gradient(135deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0.05) 100%)",
               border: "1px solid rgba(255,255,255,0.25)",
@@ -384,6 +389,23 @@ const ProfilePage = () => {
                 <div className="text-[10px] uppercase tracking-widest opacity-90 font-semibold">Tasks Requested</div>
               </div>
             </div>
+            <div className="group relative p-6 rounded-2xl backdrop-blur-md transition-all duration-300 hover:transform hover:scale-105 hover:shadow-2xl" style={{
+              background: "linear-gradient(135deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0.05) 100%)",
+              border: "1px solid rgba(255,255,255,0.25)",
+            }}>
+              <div className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" style={{
+                background: "linear-gradient(135deg, rgba(255,255,255,0.1) 0%, transparent 100%)",
+              }} />
+              <div className="relative">
+                <div className="flex justify-center mb-2">
+                  <div className="p-2.5 rounded-full bg-white/20">
+                    <IndianRupee className="w-5 h-5 text-white" />
+                  </div>
+                </div>
+                <div className="text-2xl md:text-3xl font-bold mb-1">{formatCurrency(totalEarnings)}</div>
+                <div className="text-[10px] uppercase tracking-widest opacity-90 font-semibold">Total Earnings</div>
+              </div>
+            </div>
 
             <div className="group relative p-6 rounded-2xl backdrop-blur-md transition-all duration-300 hover:transform hover:scale-105 hover:shadow-2xl" style={{
               background: "linear-gradient(135deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0.05) 100%)",
@@ -399,9 +421,28 @@ const ProfilePage = () => {
                   </div>
                 </div>
                 <div className="text-2xl md:text-3xl font-bold mb-1">
-                  <RatingBadge rating={profile?.rating ?? 0} />
+                  <RatingBadge rating={profile?.userRating ?? 0} />
                 </div>
-                <div className="text-[10px] uppercase tracking-widest opacity-90 font-semibold">Rating</div>
+                <div className="text-[10px] uppercase tracking-widest opacity-90 font-semibold">User Rating</div>
+              </div>
+            </div>
+            <div className="group relative p-6 rounded-2xl backdrop-blur-md transition-all duration-300 hover:transform hover:scale-105 hover:shadow-2xl" style={{
+              background: "linear-gradient(135deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0.05) 100%)",
+              border: "1px solid rgba(255,255,255,0.25)",
+            }}>
+              <div className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" style={{
+                background: "linear-gradient(135deg, rgba(255,255,255,0.1) 0%, transparent 100%)",
+              }} />
+              <div className="relative">
+                <div className="flex justify-center mb-2">
+                  <div className="p-2.5 rounded-full bg-white/20">
+                    <Star className="w-5 h-5 text-white" />
+                  </div>
+                </div>
+                <div className="text-2xl md:text-3xl font-bold mb-1">
+                  <RatingBadge rating={profile?.helperRating ?? 0} />
+                </div>
+                <div className="text-[10px] uppercase tracking-widest opacity-90 font-semibold">Helper Rating</div>
               </div>
             </div>
           </div>

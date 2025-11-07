@@ -290,17 +290,15 @@ export default function AvailableTasks() {
       if (!BASE_URL) throw new Error("VITE_API_BASE_URL is not set.");
       const token = getToken();
       if (!token) throw new Error("Not authenticated");
-
-      const url = `${BASE_URL}${ACCEPT_ENDPOINT}`;
+      
+      const url = `${BASE_URL}${ACCEPT_ENDPOINT}?id=${id}`;
       const res = await fetch(url, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
-          "Content-Type": "application/x-www-form-urlencoded",
           Accept: "application/json",
           ...EXTRA_HEADERS,
         },
-        body: new URLSearchParams({ id }), // ensure your backend expects "id"
       });
 
       const contentType = res.headers.get("content-type") || "";
@@ -352,11 +350,10 @@ export default function AvailableTasks() {
             <button
               key={f}
               onClick={() => setActiveFilter(f)}
-              className={`px-3.5 py-1.5 rounded-full text-[13px] font-medium transition ${
-                activeFilter === f
+              className={`px-3.5 py-1.5 rounded-full text-[13px] font-medium transition ${activeFilter === f
                   ? "bg-blue-600 text-white shadow-sm"
                   : "bg-slate-100 text-slate-700 hover:bg-slate-200"
-              }`}
+                }`}
             >
               {f}
             </button>
@@ -394,9 +391,8 @@ export default function AvailableTasks() {
           <>
             <div className="mb-4 flex items-start justify-between">
               <span
-                className={`text-[11px] font-semibold px-2.5 py-1 rounded-full ${
-                  STATUS[openTask.statusKey]?.badge || STATUS.pending.badge
-                }`}
+                className={`text-[11px] font-semibold px-2.5 py-1 rounded-full ${STATUS[openTask.statusKey]?.badge || STATUS.pending.badge
+                  }`}
               >
                 {STATUS[openTask.statusKey]?.label || STATUS.pending.label}
               </span>

@@ -1,7 +1,7 @@
 // EarningsSummary.jsx
 import React from "react";
 
-export default function EarningsSummary({ month = 0, week = 0, pending = 0, payouts = 0 }) {
+export default function EarningsSummary({ total = 0, month = 0,  week = 0, daily = 0 }) {
   return (
     <div className="bg-emerald-600 text-white p-8 rounded-2xl shadow-lg">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-8">
@@ -12,22 +12,22 @@ export default function EarningsSummary({ month = 0, week = 0, pending = 0, payo
 
         <div className="flex flex-col md:flex-row gap-12">
           <div>
+            <p className="text-2xl font-semibold">₹{total}</p>
+            <p className="text-sm opacity-90">Total Earnings </p>
+          </div>
+          <div>
             <p className="text-2xl font-semibold">₹{week}</p>
-            <p className="text-sm opacity-90">This Week</p>
+            <p className="text-sm opacity-90">Weekly</p>
           </div>
           <div>
-            <p className="text-2xl font-semibold">₹{pending}</p>
-            <p className="text-sm opacity-90">Pending Payment</p>
-          </div>
-          <div>
-            <p className="text-2xl font-semibold">{payouts}</p>
-            <p className="text-sm opacity-90">Payouts</p>
+            <p className="text-2xl font-semibold">{daily}</p>
+            <p className="text-sm opacity-90">Daily</p>
           </div>
         </div>
 
-        <button className="bg-white text-emerald-700 font-semibold px-5 py-2 rounded-lg hover:bg-emerald-50 transition">
-          Withdraw Funds
-        </button>
+        <div className="bg-white text-emerald-700 font-semibold px-5 py-2 rounded-lg hover:bg-emerald-50 transition">
+          Text
+        </div>
       </div>
     </div>
   );

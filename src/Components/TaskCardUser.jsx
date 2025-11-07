@@ -1,5 +1,8 @@
+// src/Components/TaskCardUser.jsx
+
 import React, { useMemo, useState, useEffect, useCallback, useRef } from "react";
-import { Package, MapPin, Calendar, IndianRupee, User, Phone, ArrowRight, Mail, Home } from "lucide-react";
+import { Package, MapPin, Calendar, User, Phone, ArrowRight, Mail, Home } from "lucide-react";
+import RatingModal from "./RatingModalUser.jsx";
 
 /* ──────────────────────────────────────────────────────────────────────────────
    Auth + API config
@@ -8,7 +11,7 @@ const API_BASE = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
 const getToken = () => localStorage.getItem("token") || null;
 
 // Endpoints
-const HELPER_ENDPOINT = (id) => `${API_BASE}/helpers/${id}`;
+const HELPER_ENDPOINT = (id) => `${API_BASE}/errand/showAllUsersErrands`;
 const CANCEL_ENDPOINT = (id) =>
   `${API_BASE}/errand/CancelUserErrand?id=${encodeURIComponent(id)}`;
 // Ngrok splash bypass
@@ -111,6 +114,44 @@ async function cancelTaskRequest(taskId) {
     clearTimeout(t);
   }
 }
+/** Pull the helper object for a given helperId or taskId from a user's-errands list */
+function pickHelperFromErrands(json, { helperId, taskId }) {
+  const rows = Array.isArray(json) ? json : (json?.data ?? []);
+  if (!Array.isArray(rows) || rows.length === 0) return null;
+
+  // Prefer match by task id if we have it (most precise)
+  let hit = null;
+  if (taskId != null) {
+    hit = rows.find(r => String(r?.id ?? r?._id) === String(taskId)) || null;
+  }
+
+  // Otherwise match by helper id across common backend shapes
+  if (!hit && helperId != null) {
+    hit = rows.find(r =>
+      String(
+        r?.helperProfileId?.id ??
+        r?.helperProfileId ??
+        r?.runnerId?.id ??
+        r?.runnerId ??
+        r?.assignedHelperId ??
+        r?.helper?.id ??
+        ""
+      ) === String(helperId)
+    ) || null;
+  }
+
+  if (!hit) return null;
+
+  // Common places helper data lives in the errand row:
+  return (
+    hit.helper ||
+    hit.assignedHelper ||
+    hit.helperProfile ||
+    hit.helperProfileId || // sometimes this is an embedded profile snapshot
+    null
+  );
+}
+
 
 /* ──────────────────────────────────────────────────────────────────────────────
    Utils / formatters / normalizers
@@ -128,11 +169,11 @@ const STATUS_ALIAS = {
 };
 
 const STATUS = {
-  pending:   { badge: "bg-amber-50 text-amber-700 ring-1 ring-amber-100",  border: "border-amber-100",  label: "Pending" },
-  accepted:  { badge: "bg-blue-50 text-blue-700 ring-1 ring-blue-100",     border: "border-blue-100",   label: "Accepted" },
-  ongoing:   { badge: "bg-indigo-50 text-indigo-700 ring-1 ring-indigo-100", border:"border-indigo-100", label: "Active" },
-  completed: { badge: "bg-green-50 text-green-700 ring-1 ring-green-100",  border: "border-green-100",  label: "Completed" },
-  cancelled: { badge: "bg-rose-50 text-rose-700 ring-1 ring-rose-100",     border: "border-rose-100",   label: "Cancelled" },
+  pending: { badge: "bg-amber-50 text-amber-700 ring-1 ring-amber-100", border: "border-amber-100", label: "Pending" },
+  accepted: { badge: "bg-blue-50 text-blue-700 ring-1 ring-blue-100", border: "border-blue-100", label: "Accepted" },
+  ongoing: { badge: "bg-indigo-50 text-indigo-700 ring-1 ring-indigo-100", border: "border-indigo-100", label: "Active" },
+  completed: { badge: "bg-green-50 text-green-700 ring-1 ring-green-100", border: "border-green-100", label: "Completed" },
+  cancelled: { badge: "bg-rose-50 text-rose-700 ring-1 ring-rose-100", border: "border-rose-100", label: "Cancelled" },
 };
 
 const nfINR = new Intl.NumberFormat("en-IN", { maximumFractionDigits: 0 });
@@ -147,8 +188,8 @@ function normalizeHelper(h) {
   if (!h || typeof h !== "object") return null;
   return {
     id: pickFirst(h.id, h.helperId, h.profileId),
-    name: pickFirst(h.name, h.fullName, h.username, h.profile?.name, h.user?.name, h.userid?.name),
-    phone: pickFirst(h.phone, h.mobile, h.contactNumber, h.profile?.phone, h.userid?.phone),
+    name: pickFirst(h.name, h.fullName, h.full_name, h.username, h.profile?.name, h.user?.name, h.userid?.name),
+    phone: pickFirst(h.phone, h.mobile, h.mobileNumber, h.contactNumber, h.profile?.phone, h.userid?.phone),
     email: pickFirst(h.email, h.userid?.email, h.user?.email, h.profile?.email),
     address: pickFirst(h.localAddress, h.address, h.profile?.address, h.location),
   };
@@ -253,9 +294,10 @@ function normalizeTask(raw) {
 /* ──────────────────────────────────────────────────────────────────────────────
    Helper polling hook
 ──────────────────────────────────────────────────────────────────────────────── */
-function useHelperProfile(helperId, intervalMs = 3000) {
+function useHelperProfile(helperId, taskId, intervalMs = 3000) {
+
   const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(Boolean(helperId));
+  const [loading, setLoading] = useState(Boolean(helperId || taskId));
   const [error, setError] = useState(null);
   const abortRef = useRef(null);
 
@@ -264,7 +306,7 @@ function useHelperProfile(helperId, intervalMs = 3000) {
     let intervalId;
 
     const run = async () => {
-      if (!helperId) {
+      if (!helperId && !taskId) {
         if (alive) {
           setData(null);
           setLoading(false);
@@ -282,8 +324,7 @@ function useHelperProfile(helperId, intervalMs = 3000) {
 
       try {
         const json = await fetchJSON(HELPER_ENDPOINT(helperId), { signal: ctrl.signal });
-        if (!alive) return;
-        const helper = json?.data ?? json?.helper ?? json ?? null;
+        const helper = pickHelperFromErrands(json, { helperId, taskId });
         setData(helper && typeof helper === "object" ? helper : null);
       } catch (e) {
         if (!alive) return;
@@ -296,20 +337,20 @@ function useHelperProfile(helperId, intervalMs = 3000) {
       }
     };
 
-    if (helperId) run();
-    if (helperId && intervalMs > 0) intervalId = setInterval(run, intervalMs);
+    if (helperId || taskId) run();
+    if ((helperId || taskId) && intervalMs > 0) intervalId = setInterval(run, intervalMs);
 
     return () => {
       alive = false;
       if (intervalId) clearInterval(intervalId);
       if (abortRef.current) abortRef.current.abort();
     };
-  }, [helperId, intervalMs]);
+  }, [helperId, taskId, intervalMs]);
 
   const refetch = useCallback(async () => {
-    if (!helperId) return null;
+    if (!helperId && !taskId) return null;
     return fetchJSON(HELPER_ENDPOINT(helperId));
-  }, [helperId]);
+  }, [helperId, taskId]);
 
   return { data, loading, error, refetch };
 }
@@ -353,14 +394,17 @@ function Row({ label, children, full = false }) {
 export default function TaskCardUser({
   task,
   autoOpen = false,
-  onRequestClose = () => {},
-  onCancelled = () => {},
+  onRequestClose = () => { },
+  onCancelled = () => { },
 }) {
   const t = useMemo(() => normalizeTask(task), [task]);
 
   const [open, setOpen] = useState(false);
   const [busyCancel, setBusyCancel] = useState(false);
   const [manualRefreshing, setManualRefreshing] = useState(false);
+  const [showRating, setShowRating] = useState(false);
+  const [hasRated, setHasRated] = useState(Boolean(t.userRated));
+
 
   const theme = STATUS[t.statusKey] ?? {
     badge: "bg-gray-50 text-gray-700 ring-1 ring-gray-100",
@@ -384,7 +428,7 @@ export default function TaskCardUser({
       alert("Please sign in to view details.");
       try {
         onRequestClose();
-      } catch {}
+      } catch { }
       return;
     }
     setOpen(true);
@@ -394,31 +438,39 @@ export default function TaskCardUser({
     setOpen(false);
     try {
       onRequestClose();
-    } catch {}
+    } catch { }
   }, [onRequestClose]);
 
   // Poll helper only when modal is open AND we have a helperId
-  const shouldPoll = Boolean(open && t.helperId);
+  const shouldPoll = Boolean(open && (t.helperId || t.id));
   const {
     data: helperFromApi,
     loading: helperLoading,
     error: helperError,
     refetch,
-  } = useHelperProfile(shouldPoll ? t.helperId : null);
+  } = useHelperProfile(shouldPoll ? t.helperId : null, shouldPoll ? t.id : null);
 
   // Prefer fresh API data → fallback to embedded snapshot
-  const helperRaw = t.helperId ? helperFromApi ?? t.helper ?? null : null;
+  const embeddedSnapshot =
+    t.helper ?? t.assignedHelper ?? t.helperProfile ?? t.userProfileId ?? null;
+  const helperRaw = embeddedSnapshot || helperFromApi || null;
   const helper = useMemo(() => normalizeHelper(helperRaw), [helperRaw]);
 
   const helperAssigned = t.isAssigned;
   const helperHasValidData = isHelperValid(helper);
+
+  const hasHelperData = helperHasValidData;
+  const consideredAssigned = t.isAssigned || hasHelperData;
+
+  const helperName = helper?.name || "Helper";
+  const canRateHelper =
+    t.statusKey === "completed" && Boolean(t.helperId) && !hasRated;
 
   // Some backends flip status to accepted/ongoing before linking helperId
   const taskAcceptedButNoHelper =
     !helperAssigned && (t.statusKey === "accepted" || t.statusKey === "ongoing");
 
   const refreshHelper = useCallback(async () => {
-    if (!t.helperId) return;
     try {
       setManualRefreshing(true);
       await refetch();
@@ -427,7 +479,7 @@ export default function TaskCardUser({
     } finally {
       setManualRefreshing(false);
     }
-  }, [t.helperId, refetch]);
+  }, [refetch]);
 
   const openMap = (taskObj) => {
     if (taskObj.lat != null && taskObj.lng != null)
@@ -463,14 +515,14 @@ export default function TaskCardUser({
   return (
     <>
       <div
-        className={`w-full h-full min-w-0 flex flex-col rounded-2xl border ${theme.border} bg-white/90 p-5 shadow-[0_1px_2px_rgba(0,0,0,0.04)] hover:shadow-[0_6px_24px_rgba(0,0,0,0.06)] hover:ring-1 hover:ring-slate-200 transition`}
+        className={`w-full h-full flex flex-col rounded-2xl border ${theme.border} bg-white p-5 shadow hover:shadow-lg hover:ring-1 hover:ring-slate-200 transition`}
       >
         <div className="flex items-center justify-between gap-2">
-          <span className="inline-flex items-center gap-2 text-xs font-medium px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 shrink-0">
+          <span className="inline-flex items-center gap-2 text-xs font-medium px-2.5 py-1 rounded-full bg-slate-100 text-slate-700">
             <Package className="w-3.5 h-3.5" />
             {t.category}
           </span>
-          <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-full ${theme.badge} shrink-0`}>
+          <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-full ${theme.badge}`}>
             {theme.label}
           </span>
         </div>
@@ -481,7 +533,7 @@ export default function TaskCardUser({
           <p className="mt-2 text-[14px] text-slate-800 leading-6 break-normal line-clamp-3">{t.description}</p>
         )}
 
-        <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-[13px] text-slate-700">
+        <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-[13px] text-slate-700  min-w-0">
           <span className="inline-flex items-center gap-1.5 min-w-0">
             <MapPin className="w-4 h-4" />
             <span className="truncate">{t.location}</span>
@@ -541,6 +593,8 @@ export default function TaskCardUser({
                 <Calendar className="w-4 h-4" /> {formatDate(t.createdAt)}
               </span>
             </Row>
+            <Row label="Budget">{formatINR(t.budget)}</Row>
+
             {t.urgency && <Row label="Urgency">{String(t.urgency).toUpperCase()}</Row>}
             {t.assignedAt && (
               <Row label="Helper Assigned At">
@@ -549,6 +603,12 @@ export default function TaskCardUser({
                 </span>
               </Row>
             )}
+            <Row label="Status">
+              <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${theme.badge}`}>
+                {theme.label}
+              </span>
+            </Row>
+            {/* ✅ UNTIL HERE */}
           </div>
           <div className="mt-4 flex gap-2">
             <button
@@ -576,14 +636,14 @@ export default function TaskCardUser({
           </div>
 
           {/* STATE 1: Pending (no helper assigned) */}
-          {!helperAssigned && !taskAcceptedButNoHelper && (
+          {!consideredAssigned && !taskAcceptedButNoHelper && (
             <div className="text-slate-600 text-[14px]">
               No helper has accepted this task yet. You’ll see their contact here once someone is assigned.
             </div>
           )}
 
           {/* STATE 2: Accepted/Ongoing but NO helperId (backend delay/bug) */}
-          {taskAcceptedButNoHelper && (
+          {taskAcceptedButNoHelper && !hasHelperData && (
             <div className="text-amber-700 bg-amber-50 border border-amber-200 rounded-xl p-3 text-[14px]">
               A helper seems to have accepted, but the system hasn’t attached the helper ID yet. This will update
               automatically once it’s linked.
@@ -591,33 +651,72 @@ export default function TaskCardUser({
           )}
 
           {/* STATE 3: Assigned + data present */}
-          {helperAssigned && helperHasValidData && (
+
+          {consideredAssigned && hasHelperData && (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-10 text-[14px]">
-              <Row label="Name">
-                <span className="inline-flex items-center gap-2">
-                  <User className="w-4 h-4" /> {helper.name}
-                </span>
-              </Row>
-              <Row label="Phone">
-                <span className="inline-flex items-center gap-2">
-                  <Phone className="w-4 h-4" /> {helper.phone}
-                </span>
-              </Row>
-              <Row label="Email">
-                <span className="inline-flex items-center gap-2">
-                  <Mail className="w-4 h-4" /> {helper.email}
-                </span>
-              </Row>
-              <Row label="Local Address" full>
-                <span className="inline-flex items-center gap-2">
-                  <Home className="w-4 h-4" /> {helper.address}
-                </span>
-              </Row>
+              {/* Name + Buttons (same row) */}
+              <div className="pb-3 border-b border-slate-100 last:border-0 sm:col-span-2">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                  <div>
+                    <div className="text-slate-500 text-[12px] tracking-wide">Name</div>
+                    <div className="text-slate-900 mt-1 inline-flex items-center gap-2">
+                      <User className="w-4 h-4" /> {helper.name || "-"}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    {/* Visit Profile */}
+                    <button
+                      onClick={() => { if (helper?.id) window.open(`/profile/${helper.id}`, "_blank"); }}
+                      className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white text-slate-800 px-3.5 py-2 text-[13px] font-medium hover:bg-slate-100 transition"
+                    >
+                      <User className="w-4 h-4" /> Visit Profile
+                    </button>
+                    {/* Rate Helper (same placement as helper card) */}
+                    <button
+                      disabled={!canRateHelper}
+                      onClick={() => { if (!canRateHelper) return; setOpen(false); setShowRating(true); }}
+                      className={`inline-flex items-center gap-2 rounded-xl px-3.5 py-2 text-[13px] font-medium transition border ${canRateHelper
+                        ? "border-indigo-300 bg-indigo-50 text-indigo-700 hover:bg-indigo-100"
+                        : "border-slate-300 bg-slate-100 text-slate-400 cursor-not-allowed"
+                        }`}
+                    >
+                      ☆ {hasRated ? "Rated" : "Rate Helper"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Phone + Email (two-up row) */}
+              <div className="pb-3 border-b border-slate-100 last:border-0 sm:col-span-2">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-start sm:gap-50">
+                  <div className="min-w-0">
+                    <div className="text-slate-500 text-[12px] tracking-wide">Phone</div>
+                    <div className="text-slate-900 mt-1 inline-flex items-center gap-2 overflow-hidden text-ellipsis whitespace-nowrap">
+                      <Phone className="w-4 h-4" /> {helper.phone || "-"}
+                    </div>
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-slate-500 text-[12px] tracking-wide">Email</div>
+                    <div className="text-slate-900 mt-1 inline-flex items-center gap-2 overflow-hidden text-ellipsis whitespace-nowrap">
+                      <Mail className="w-4 h-4" /> {helper.email || "-"}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Address full-width */}
+              <div className="pb-0 border-0 sm:col-span-2">
+                <div className="text-slate-500 text-[12px] tracking-wide">Local Address</div>
+                <div className="text-slate-900 mt-1 inline-flex items-start gap-2">
+                  <Home className="w-4 h-4 mt-0.5" />
+                  <span>{helper.address || "-"}</span>
+                </div>
+              </div>
             </div>
           )}
 
           {/* STATE 4: Assigned but data missing */}
-          {helperAssigned && !helperHasValidData && (
+          {consideredAssigned && !hasHelperData && (
             <div className="text-[14px]">
               <div className="text-amber-700 bg-amber-50 border border-amber-200 rounded-xl p-3">
                 Helper has been assigned, but their details aren’t available yet.
@@ -637,6 +736,18 @@ export default function TaskCardUser({
           )}
         </section>
       </Modal>
+
+      <RatingModal
+        visible={showRating}
+        userName={helperName}
+        userId={t.helperId}          // <-- sends HELPER ID in the ?id= param
+        onSubmit={(value) => {
+          console.log("⭐ Rated helper:", { rating: value, helperId: t.helperId });
+          setHasRated(true);         // disable the button next time
+          setShowRating(false);
+        }}
+        onClose={() => setShowRating(false)}
+      />
     </>
   );
 }

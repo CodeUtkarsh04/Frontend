@@ -1,19 +1,9 @@
 // src/Components/TaskCardHelper.jsx
 import React, { useMemo, useState, useEffect, useCallback } from "react";
-import {
-  Package,
-  MapPin,
-  Calendar,
-  IndianRupee,
-  User,
-  Phone,
-  Mail,
-  Home,
-  ArrowRight,
-  CheckCircle,
-  XCircle,
-} from "lucide-react";
+import {Package,MapPin,Calendar,User,Phone,Mail,Home,ArrowRight,CheckCircle,XCircle} from "lucide-react";
 import ConfirmModal from "./ConfirmModal.jsx";
+import RatingModal from "./RatingModalHelper.jsx";
+
 
 /* ──────────────────────────────────────────────────────────────
    Auth + API config
@@ -24,10 +14,7 @@ const getToken = () => localStorage.getItem("token") || null;
 // Endpoints (kept for cancel; complete will use minimal query params as backend requested)
 const CANCEL_ENDPOINT = (id) =>
   `${API_BASE}/errand/Cancel?errandId=${encodeURIComponent(id)}`;
-const COMPLETE_ENDPOINT_OLD = (helperId, userId, errandId) =>
-  `${API_BASE}/errand/TaskCompleted?helperProfileId=${encodeURIComponent(
-    helperId
-  )}&userProfileId=${encodeURIComponent(userId)}&errandId=${encodeURIComponent(errandId)}`;
+
 
 // Ngrok splash bypass
 const EXTRA_HEADERS = API_BASE.includes("ngrok")
@@ -216,22 +203,25 @@ export default function TaskCardHelper({ task, autoOpen = false, onRequestClose 
 
   // customer normalizer uses pickFirst (now defined above)
   const customer = useMemo(() => {
-    const cust = task?.customerId || {};
-    const addr = task?.pickupAddressId || {};
-    const posterProfile = task?.userProfileId || {};
+    const p = task?.userProfileId || {};
 
     return {
-      id: cust.id || "-",
-      name: pickFirst(cust.username, cust.name, posterProfile.name) || "-",
-      phone: pickFirst(posterProfile.phone, cust.phone) || "-",
-      email: pickFirst(cust.email, posterProfile.email) || "-",
-      address: pickFirst(posterProfile.localAddress, addr.address, addr.location) || "-",
+      id: p.id || "-",                                // used by Visit Profile button
+      name: p.name || p.userid?.username || "-",      // userProfile name (fallback to userid.username)
+      phone: p.phone || "-",                          // phone from userProfileId
+      email: p.userid?.email || p.email || "-",       // email from nested userid if present
+      address: p.localAddress || "-",                 // localAddress from userProfileId
     };
   }, [task]);
+
 
   const [open, setOpen] = useState(autoOpen);
   const [busyCancel, setBusyCancel] = useState(false);
   const [busyComplete, setBusyComplete] = useState(false);
+  const [showRating, setShowRating] = useState(false);
+  const [ratingTarget, setRatingTarget] = useState({ id: null, name: "Customer" });
+
+
   const [statusMessage, setStatusMessage] = useState({ type: "", message: "" });
 
   // ----------------- moved confirm state inside component (minimal change) -----------------
@@ -312,18 +302,27 @@ export default function TaskCardHelper({ task, autoOpen = false, onRequestClose 
           // pass raw backend object if present so extraction works
           await completeErrand(task?.raw ?? task ?? t);
           console.log(">>> completeErrand resolved — success");
+
+          // Show success message briefly, then close details + confirm and open rating modal
           setStatusMessage({ type: "success", message: "Errand completed successfully! 🎉" });
-          setTimeout(() => {
-            setOpen(false);
-            onAfterAction();
-          }, 1500);
+
+          // Clear confirm modal state immediately (close it)
+          setConfirmState({ open: false, message: "", busy: false, onConfirm: null });
+
+          // Close main details modal so only rating modal remains
+          setOpen(false);
+
+          // small delay so UI settles (optional), then open rating modal
+          setTimeout(() => setShowRating(true), 200);
         } catch (e) {
           console.error(">>> completeErrand failed:", e);
           setStatusMessage({ type: "error", message: e.message || "Failed to complete errand." });
         } finally {
           setBusyComplete(false);
+          // ensure confirm is closed just in case
           setConfirmState({ open: false, message: "", busy: false, onConfirm: null });
         }
+
       },
     });
   };
@@ -349,9 +348,9 @@ export default function TaskCardHelper({ task, autoOpen = false, onRequestClose 
           </p>
         )}
 
-        <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-[13px] text-slate-700">
-          <span className="inline-flex items-center gap-1.5">
-            <MapPin className="w-4 h-4" /> {t.location}
+        <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-[13px] text-slate-700 min-w-0">
+          <span className="inline-flex items-center gap-1.5  min-w-0">
+            <MapPin className="w-4 h-4 shrink-0" /> {t.location}
           </span>
           <span className="inline-flex items-center gap-1.5">
             {formatINR(t.budget)}
@@ -427,17 +426,91 @@ export default function TaskCardHelper({ task, autoOpen = false, onRequestClose 
         </section>
 
         {/* Customer Contact */}
+        {/* Customer Contact */}
+        {/* Customer Contact */}
         <section className="rounded-2xl border border-slate-200 bg-white p-5">
           <div className="text-[12px] font-semibold text-slate-500 uppercase mb-3">
             Customer Contact
           </div>
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-10 text-[14px]">
-            <Row label="Name"><User className="w-4 h-4" /> {customer?.name || "-"}</Row>
-            <Row label="Phone"><Phone className="w-4 h-4" /> {customer?.phone || "-"}</Row>
-            <Row label="Email"><Mail className="w-4 h-4" /> {customer?.email || "-"}</Row>
-            <Row label="Local Address" full><Home className="w-4 h-4" /> {customer?.address || "-"}</Row>
+            {/* Name + Buttons (same row) */}
+            <div className="pb-3 border-b border-slate-100 last:border-0 sm:col-span-2">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div>
+                  <div className="text-slate-500 text-[12px] tracking-wide">Name</div>
+                  <div className="text-slate-900 mt-1 inline-flex items-center gap-2">
+                    <User className="w-4 h-4" /> {customer?.name || "-"}
+                  </div>
+                </div>
+
+                {/* Buttons Row */}
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  {/* Visit Profile Button */}
+                  <button
+                    onClick={() => {
+                      if (customer?.id) {
+                        window.open(`/profile/${customer.id}`, "_blank");
+                      }
+                    }}
+                    className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white text-slate-800 px-3.5 py-2 text-[13px] font-medium hover:bg-slate-100 transition"
+                  >
+                    <User className="w-4 h-4" /> Visit Profile
+                  </button>
+
+                  {/* Rate Customer Button */}
+                  <button
+                    disabled={t.statusKey !== "completed"}
+                    onClick={() => {
+                      if (t.statusKey !== "completed") return; // block click
+                      setOpen(false);
+                      setRatingTarget({
+                        id: customer?.id || task?.userProfileId?.id || null,
+                        name: customer?.name || task?.userProfileId?.name || "Customer"
+                      });
+                      setShowRating(true);
+                    }}
+                    className={`inline-flex items-center gap-2 rounded-xl px-3.5 py-2 text-[13px] font-medium transition border ${t.statusKey === "completed" ? "border-indigo-300 bg-indigo-50 text-indigo-700 hover:bg-indigo-100" : "border-slate-300 bg-slate-100 text-slate-400 cursor-not-allowed"}`}
+                  >
+                    ☆ Rate Customer
+                  </button>
+
+
+                </div>
+              </div>
+            </div>
+
+            {/* Phone + Email */}
+            <div className="pb-3 border-b border-slate-100 last:border-0 sm:col-span-2">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-start sm:gap-50">
+                <div className="min-w-0">
+                  <div className="text-slate-500 text-[12px] tracking-wide">Phone</div>
+                  <div className="text-slate-900 mt-1 inline-flex items-center gap-2 overflow-hidden text-ellipsis whitespace-nowrap">
+                    <Phone className="w-4 h-4" /> {customer?.phone || "-"}
+                  </div>
+                </div>
+
+                <div className="min-w-0">
+                  <div className="text-slate-500 text-[12px] tracking-wide">Email</div>
+                  <div className="text-slate-900 mt-1 inline-flex items-center gap-2 overflow-hidden text-ellipsis whitespace-nowrap">
+                    <Mail className="w-4 h-4" /> {customer?.email || "-"}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Local Address */}
+            <div className="pb-0 border-0 sm:col-span-2">
+              <div className="text-slate-500 text-[12px] tracking-wide">Local Address</div>
+              <div className="text-slate-900 mt-1 inline-flex items-start gap-2">
+                <Home className="w-4 h-4 mt-0.5" />
+                <span>{customer?.address || "-"}</span>
+              </div>
+            </div>
           </div>
         </section>
+
+
       </Modal>
       <ConfirmModal
         open={confirmState.open}
@@ -450,6 +523,21 @@ export default function TaskCardHelper({ task, autoOpen = false, onRequestClose 
           if (typeof confirmState.onConfirm === "function") confirmState.onConfirm();
         }}
       />
+      <RatingModal
+        key={showRating ? (ratingTarget.id ?? 'rating') : 'closed'}
+        visible={showRating}
+        userName={ratingTarget.name}
+        userId={ratingTarget.id}   // <-- this ensures we rate the customer (id=13)
+        onSubmit={(value) => {
+          console.log("⭐ Rating submitted:", value);
+          setShowRating(false);         // single source of truth
+
+
+        }}
+        onClose={() => setShowRating(false)}
+      />
+
+
     </>
   );
 }
