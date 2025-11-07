@@ -178,6 +178,10 @@ export default function AvailableTasks() {
   const busyRef = useRef(false);    // prevents overlapping API calls
   const failCountRef = useRef(0);   // stop spamming API on repeated failures
   const MAX_FAILS = 5;
+  // Paging
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 15;
+
 
   // ⬇️ define it INSIDE the component so it can access state/refs
   const fetchErrands = async () => {
@@ -192,7 +196,12 @@ export default function AvailableTasks() {
       const token = getToken();
       if (!token) throw new Error("Not authenticated");
 
-      const url = `${BASE_URL}${AVAILABLE_ENDPOINT}`;
+      const urlObj = new URL(`${BASE_URL}${AVAILABLE_ENDPOINT}`);
+      // If your backend wants zero-based pages use (page - 1) instead:
+      urlObj.searchParams.set("page", String(page - 1));
+      urlObj.searchParams.set("size", String(PAGE_SIZE));
+      const url = urlObj.toString();
+
       const res = await fetch(url, {
         method: "GET",
         headers: {
@@ -258,23 +267,32 @@ export default function AvailableTasks() {
   // Fetch tasks
   useEffect(() => {
     setLoading(true);
+    // (optional UX) clear previous page items while switching
+    setData([]);
 
     // 1) initial load
     fetchErrands();
 
-    // 2) poll every 3 seconds
+    // 2) poll every 3 seconds for the CURRENT page
+    if (intervalRef.current) clearInterval(intervalRef.current);
     intervalRef.current = setInterval(fetchErrands, 3000);
 
     // 3) also refetch when user returns to the tab
     const onVis = () => { if (!document.hidden) fetchErrands(); };
     document.addEventListener("visibilitychange", onVis);
 
-    // cleanup on unmount
+    // cleanup on unmount / when page changes
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
       document.removeEventListener("visibilitychange", onVis);
     };
-  }, []);
+  }, [page]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [activeFilter]);
+
+
 
   // Filters
   const filteredTasks = useMemo(() => {
@@ -290,7 +308,7 @@ export default function AvailableTasks() {
       if (!BASE_URL) throw new Error("VITE_API_BASE_URL is not set.");
       const token = getToken();
       if (!token) throw new Error("Not authenticated");
-      
+
       const url = `${BASE_URL}${ACCEPT_ENDPOINT}?id=${id}`;
       const res = await fetch(url, {
         method: "POST",
@@ -351,8 +369,8 @@ export default function AvailableTasks() {
               key={f}
               onClick={() => setActiveFilter(f)}
               className={`px-3.5 py-1.5 rounded-full text-[13px] font-medium transition ${activeFilter === f
-                  ? "bg-blue-600 text-white shadow-sm"
-                  : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                ? "bg-blue-600 text-white shadow-sm"
+                : "bg-slate-100 text-slate-700 hover:bg-slate-200"
                 }`}
             >
               {f}
@@ -367,24 +385,47 @@ export default function AvailableTasks() {
       {error && <div className="text-red-600 text-sm">Error: {String(error)}</div>}
 
       {!loading && !error && (
-        <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-          {filteredTasks.length > 0 ? (
-            filteredTasks.map((task) => (
-              <div key={task.id} className="h-full">
-                <HelperTaskCard
-                  task={task}
-                  status={task.statusKey}
-                  onOpen={() => setOpenTask(task)}
-                />
-              </div>
-            ))
-          ) : (
-            <p className="text-slate-500 col-span-full text-center text-lg">
-              No errands match your selected filter.
-            </p>
-          )}
-        </div>
+        <>
+          <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+            {filteredTasks.length > 0 ? (
+              filteredTasks.map((task) => (
+                <div key={task.id} className="h-full">
+                  <HelperTaskCard
+                    task={task}
+                    status={task.statusKey}
+                    onOpen={() => setOpenTask(task)}
+                  />
+                </div>
+              ))
+            ) : (
+              <p className="text-slate-500 col-span-full text-center text-lg">
+                No errands match your selected filter.
+              </p>
+            )}
+          </div>
+
+          {/* Pagination controls */}
+          <div className="mt-4 flex items-center justify-end gap-2">
+            <button
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page === 1}
+              className="px-3 py-1.5 rounded-lg border border-slate-300 text-[13px] text-slate-800 disabled:opacity-50"
+            >
+              Prev
+            </button>
+            <span className="text-sm text-slate-600">Page {page}</span>
+            <button
+              onClick={() => setPage((p) => p + 1)}
+              // last-page guard: server returns < PAGE_SIZE on the last page
+              disabled={data.length < PAGE_SIZE}
+              className="px-3 py-1.5 rounded-lg border border-slate-300 text-[13px] text-slate-800 disabled:opacity-50"
+            >
+              Next
+            </button>
+          </div>
+        </>
       )}
+
 
       <Modal open={!!openTask} onClose={() => setOpenTask(null)}>
         {openTask && (
