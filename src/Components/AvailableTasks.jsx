@@ -2,7 +2,7 @@
 import React, { useMemo, useState, useEffect, useRef } from "react";
 import {
   MapPin, Calendar, User, Package, IndianRupee,
-  ArrowRight, Phone, Mail, Home,
+  ArrowRight, Phone, Mail, Home, X
 } from "lucide-react";
 
 /* -------------------------------------------------------
@@ -79,13 +79,6 @@ function Modal({ open, onClose, children }) {
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
       <div className="absolute inset-0 flex items-center justify-center p-4">
         <div className="relative w-full max-w-4xl max-h-[86vh] overflow-auto rounded-2xl bg-white shadow-2xl p-6">
-          <button
-            onClick={onClose}
-            className="absolute top-3 right-3 text-slate-500 hover:text-slate-700 text-2xl"
-            aria-label="Close"
-          >
-            ×
-          </button>
           {children}
         </div>
       </div>
@@ -181,6 +174,7 @@ export default function AvailableTasks() {
   // Paging
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 15;
+  const closeModal = () => setOpenTask(null);
 
 
   // ⬇️ define it INSIDE the component so it can access state/refs
@@ -427,7 +421,8 @@ export default function AvailableTasks() {
       )}
 
 
-      <Modal open={!!openTask} onClose={() => setOpenTask(null)}>
+      <Modal open={!!openTask} onClose={closeModal}>
+
         {openTask && (
           <>
             <div className="mb-4 flex items-start justify-between">
@@ -437,12 +432,15 @@ export default function AvailableTasks() {
               >
                 {STATUS[openTask.statusKey]?.label || STATUS.pending.label}
               </span>
-              <div className="inline-flex items-center gap-2 rounded-xl bg-emerald-50 ring-1 ring-emerald-100 px-3.5 py-2">
-                <IndianRupee className="w-4 h-4 text-emerald-700" />
-                <span className="text-emerald-700 font-semibold text-[15px]">
-                  {formatINR(openTask.price)}
-                </span>
-              </div>
+              <button
+                onClick={closeModal}
+                aria-label="Close"
+                className="absolute - top-4 right-4 h-10 w-15  flex items-center justify-center rounded-full bg-white shadow-lg ring-1 ring-slate-200  hover:bg-slate-50 hover:shadow-xl hover:ring-slate-300 active:scale-95 text-slate-600 hover:text-slate-800 transition-all duration-200 backdrop-blur-sm cursor-pointer
+"
+              >
+                <X className="h-7 w-7" strokeWidth={2.2} />
+              </button>
+
             </div>
 
             {/* Task details */}
@@ -452,6 +450,13 @@ export default function AvailableTasks() {
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-10 text-[14px]">
                 <Row label="Task ID">{openTask.id}</Row>
+                <Row label="Price">
+                  <span className="inline-flex items-center gap-2 text-emerald-700 font-semibold">
+                    <IndianRupee className="w-4 h-4" />
+                    {formatINR(openTask.price)}
+                  </span>
+                </Row>
+
                 <Row label="Category">
                   <span className="inline-flex items-center gap-2">
                     <Package className="w-4 h-4" /> {openTask.category}
@@ -489,39 +494,44 @@ export default function AvailableTasks() {
               <div className="text-[12px] font-semibold text-slate-500 tracking-wider uppercase mb-3">
                 User Contact
               </div>
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-10 text-[14px]">
                 <Row label="Name">
                   <span className="inline-flex items-center gap-2">
                     <User className="w-4 h-4" /> {openTask.userName}
                   </span>
                 </Row>
+
                 <Row label="Phone">
                   <span className="inline-flex items-center gap-2">
                     <Phone className="w-4 h-4" /> {openTask.userPhone}
                   </span>
                 </Row>
+
                 <Row label="Email">
                   <span className="inline-flex items-center gap-2">
                     <Mail className="w-4 h-4" /> {openTask.userEmail}
                   </span>
                 </Row>
+
                 <Row label="Local Address" full>
                   <span className="inline-flex items-center gap-2">
                     <Home className="w-4 h-4" /> {openTask.userAddress}
                   </span>
                 </Row>
               </div>
+
+              {/* ✅ Accept Task button inside User Contact */}
+              <div className="mt-1 flex justify-end">
+                <button
+                  onClick={() => accept(openTask.id)}
+                  className="px-4 py-2 text-[13px] rounded-lg bg-blue-600 text-white hover:bg-blue-700 active:scale-95 transition"
+                >
+                  Accept Task
+                </button>
+              </div>
             </section>
 
-            {/* Actions */}
-            <div className="mt-6 pt-4 border-t border-slate-200 flex flex-wrap gap-3 justify-end">
-              <button
-                onClick={() => accept(openTask.id)}
-                className="px-4 py-2 text-[13px] rounded-lg bg-blue-600 text-white hover:bg-blue-700"
-              >
-                Accept Task
-              </button>
-            </div>
           </>
         )}
       </Modal>
