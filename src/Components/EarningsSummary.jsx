@@ -1,7 +1,7 @@
 // EarningsSummary.jsx
 import React from "react";
 
-export default function EarningsSummary({ total = 0, month = 0,  week = 0, daily = 0 }) {
+export default function EarningsSummary({ total = 0, month = 0, week = 0, daily = 0 }) {
   return (
     <div className="bg-emerald-600 text-white p-8 rounded-2xl shadow-lg">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-8">
@@ -26,7 +26,7 @@ export default function EarningsSummary({ total = 0, month = 0,  week = 0, daily
         </div>
 
         <div className="bg-white text-emerald-700 font-semibold px-5 py-2 rounded-lg hover:bg-emerald-50 transition">
-          Text
+          Comming Soon...
         </div>
       </div>
     </div>

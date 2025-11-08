@@ -4,13 +4,13 @@ import {
   MapPin, Calendar, User, Package, IndianRupee,
   ArrowRight, Phone, Mail, Home, X
 } from "lucide-react";
+import AvailableFilters from "./AvailableFilters.jsx";
 
 /* -------------------------------------------------------
    Auth + API config
 -------------------------------------------------------- */
 const BASE_URL = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
 const getToken = () => localStorage.getItem("token") || null;
-// 🔧 EDIT if your backend uses a different path
 const AVAILABLE_ENDPOINT = "/errand/showErrands";
 const ACCEPT_ENDPOINT = "/errand/Accept";
 
@@ -175,28 +175,39 @@ export default function AvailableTasks() {
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 15;
   const closeModal = () => setOpenTask(null);
+  const [filters, setFilters] = useState({ catId: "", search: "", maxPrice: 10000 });
+  useEffect(() => { setPage(1); }, [filters]);
 
 
+
+  // ⬇️ define it INSIDE the component so it can access state/refs
   // ⬇️ define it INSIDE the component so it can access state/refs
   const fetchErrands = async () => {
     if (busyRef.current) return;
     busyRef.current = true;
 
     try {
-      if (!BASE_URL) {
-        throw new Error("VITE_API_BASE_URL is not set. Configure your API base URL.");
-      }
-
+      if (!BASE_URL) throw new Error("VITE_API_BASE_URL is not set.");
       const token = getToken();
       if (!token) throw new Error("Not authenticated");
 
       const urlObj = new URL(`${BASE_URL}${AVAILABLE_ENDPOINT}`);
-      // If your backend wants zero-based pages use (page - 1) instead:
       urlObj.searchParams.set("page", String(page - 1));
       urlObj.searchParams.set("size", String(PAGE_SIZE));
-      const url = urlObj.toString();
 
-      const res = await fetch(url, {
+      // send catId ONLY when a real category is selected
+      const cid = Number(filters.catId);
+      if (!Number.isNaN(cid) && cid > 0) {
+        urlObj.searchParams.set("catId", String(cid));
+      }
+
+      if (filters.maxPrice != null) {
+        urlObj.searchParams.set("maxPrice", String(filters.maxPrice));
+      }
+
+      const urlStr = urlObj.toString(); // ✅ use the URL we built
+
+      const res = await fetch(urlStr, {
         method: "GET",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -214,7 +225,7 @@ export default function AvailableTasks() {
 
       if (!res.ok) {
         const preview = raw.slice(0, 200);
-        throw new Error(`GET ${url} failed (${res.status}). Body: ${preview}`);
+        throw new Error(`GET ${urlStr} failed (${res.status}). Body: ${preview}`);
       }
 
       if (!contentType.includes("application/json")) {
@@ -224,7 +235,6 @@ export default function AvailableTasks() {
         );
       }
 
-      // Safe JSON parse with helpful error
       let json;
       try {
         json = raw ? JSON.parse(raw) : null;
@@ -238,14 +248,11 @@ export default function AvailableTasks() {
 
       setData(normalized);
       setError(null);
-
-      // success ⇒ reset fail counter
-      failCountRef.current = 0;
+      failCountRef.current = 0; // success
     } catch (e) {
       console.error("GET available errands error:", e);
       setError(e?.message || "Couldn’t load errands.");
 
-      // stop polling if repeatedly failing
       failCountRef.current += 1;
       if (failCountRef.current >= MAX_FAILS && intervalRef.current) {
         clearInterval(intervalRef.current);
@@ -257,6 +264,7 @@ export default function AvailableTasks() {
       setLoading(false);
     }
   };
+
 
   // Fetch tasks
   useEffect(() => {
@@ -280,7 +288,7 @@ export default function AvailableTasks() {
       if (intervalRef.current) clearInterval(intervalRef.current);
       document.removeEventListener("visibilitychange", onVis);
     };
-  }, [page]);
+  }, [page, filters, activeFilter]);
 
   useEffect(() => {
     setPage(1);
@@ -291,10 +299,16 @@ export default function AvailableTasks() {
   // Filters
   const filteredTasks = useMemo(() => {
     return data.filter((t) => {
-      if (activeFilter === "High Pay") return Number(t.price) >= 250;
+      // High Pay tab
+      if (activeFilter === "High Pay" && Number(t.price) < 250) return false;
+
+      // Price cap (client-side fallback)
+      if (filters.maxPrice != null && Number(t.price) > Number(filters.maxPrice)) return false;
+
       return true;
     });
-  }, [data, activeFilter]);
+  }, [data, activeFilter, filters.maxPrice]);
+
 
   const accept = async (id) => {
     setUiError(null);
@@ -355,23 +369,35 @@ export default function AvailableTasks() {
 
   return (
     <div className="max-w-7xl mx-auto px-6 py-12 space-y-8 mt-10">
-      <div className="flex items-center justify-between gap-4">
-        <div className="text-sm text-slate-500">Live errands near you</div>
-        <div className="flex flex-wrap gap-2">
-          {["All Tasks", "High Pay"].map((f) => (
-            <button
-              key={f}
-              onClick={() => setActiveFilter(f)}
-              className={`px-3.5 py-1.5 rounded-full text-[13px] font-medium transition ${activeFilter === f
-                ? "bg-blue-600 text-white shadow-sm"
-                : "bg-slate-100 text-slate-700 hover:bg-slate-200"
-                }`}
-            >
-              {f}
-            </button>
-          ))}
+      {/* Header + horizontal filters */}
+      <div className="space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="text-sm text-slate-500">Live errands near you</div>
+
+          <div className="mt-0 flex flex-wrap gap-2">
+            {["All Tasks", "High Pay"].map((f) => (
+              <button
+                key={f}
+                onClick={() => setActiveFilter(f)}
+                className={`px-3.5 py-1.5 rounded-full text-[13px] font-medium transition ${activeFilter === f
+                  ? "bg-blue-600 text-white shadow-sm"
+                  : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                  }`}
+              >
+                {f}
+              </button>
+            ))}
+          </div>
         </div>
+
+        <AvailableFilters
+          onFilterChange={(f) => { setFilters(f); setPage(1); fetchErrands();  }}
+          apiBase={BASE_URL}
+          getToken={getToken}
+        />
       </div>
+
+
 
       <ErrorBanner message={uiError} onClose={() => setUiError(null)} />
 
