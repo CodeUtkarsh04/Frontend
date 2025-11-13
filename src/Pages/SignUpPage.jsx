@@ -2,28 +2,12 @@ import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react'
 import { Eye, EyeOff, AlertCircle, Loader2, Mail } from 'lucide-react';
 import { useNavigate } from "react-router-dom";
 
-// Utils
-const validateEmail = (email) => {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return emailRegex.test(email) && email.length <= 254;
-};
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
-const validatePassword = (password) => {
-  const checks = {
-    length: password.length >= 10,
-    uppercase: /[A-Z]/.test(password),
-    lowercase: /[a-z]/.test(password),
-    number: /\d/.test(password),
-    special: /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>\/?]/.test(password),
-    noCommon: !/password|123456|qwerty|admin/i.test(password),
-    noRepeat: !/(.)\1{2,}/.test(password),
-    noSpaces: !/\s/.test(password),
-    noSequential: !/(?:abc|abcd|123|1234)/i.test(password)
-  };
-  const score = Object.values(checks).filter(Boolean).length;
-  return { checks, score, isValid: score >= 6 };
+const validateEmail = (email) => {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email) && email.length <= 254;
 };
 
 const validateUsername = (username) => {
@@ -37,49 +21,166 @@ const validateUsername = (username) => {
       /^[a-zA-Z][a-zA-Z0-9_]*$/.test(username),
   };
 };
+const DEFAULT_COMMON = [
+  "password", "123456", "123456789", "qwerty", "abc123", "admin",
+  "letmein", "welcome", "iloveyou", "monkey", "dragon", "baseball"
+];
 
-// Password strength indicator
+const hasSequentialRun = (s, runLen = 3) => {
+  if (!s || s.length < runLen) return false;
+  const normalized = s.toLowerCase();
+  for (let i = 0; i <= normalized.length - runLen; i++) {
+   
+    let asc = true;
+    let desc = true;
+    for (let k = 1; k < runLen; k++) {
+      const prev = normalized.charCodeAt(i + k - 1);
+      const cur = normalized.charCodeAt(i + k);
+      asc = asc && (cur === prev + 1);
+      desc = desc && (cur === prev - 1);
+    }
+    if (asc || desc) return true;
+  }
+  return false;
+};
+
+const validatePassword = (password, commonList = DEFAULT_COMMON) => {
+  const raw = String(password || "");        
+  const len = raw.length;
+
+  const upper = /[A-Z]/.test(raw);
+  const lower = /[a-z]/.test(raw);
+  const number = /\d/.test(raw);
+  const special = /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>\/?~`]/.test(raw);
+  const noSpaces = !/\s/.test(raw);         
+  const noLongRepeat = !/(.)\1{2,}/.test(raw); 
+  const noCommon = !commonList.some(c => raw.toLowerCase() === c); 
+
+  const isFullySequential = (str) => {
+    if (!str || str.length < 3) return false;
+    const norm = str.toLowerCase();
+    let asc = true, desc = true;
+    for (let i = 1; i < norm.length; i++) {
+      const prev = norm.charCodeAt(i - 1);
+      const cur = norm.charCodeAt(i);
+      if (cur !== prev + 1) asc = false;
+      if (cur !== prev - 1) desc = false;
+    }
+    return asc || desc;
+  };
+
+  const isAllSame = (str) => {
+    if (!str) return false;
+    for (let i = 1; i < str.length; i++) if (str[i] !== str[0]) return false;
+    return true;
+  };
+
+  const categories = [upper, lower, number, special].filter(Boolean).length;
+
+  const checks = {
+    length10plus: len >= 10,
+    length6plus: len >= 6,
+    uppercase: upper,
+    lowercase: lower,
+    number: number,
+    special: special,
+    noSpaces,
+    noRepeat: noLongRepeat,
+    noCommon,
+    notAllSame: !isAllSame(raw),
+    notSequential: !isFullySequential(raw),
+    categoriesCount: categories
+  };
+
+  let level = 1;
+
+  if (
+    len <= 1 ||
+    isAllSame(raw) ||
+    (/^[0-9]+$/.test(raw) && len < 3) ||
+    (/^[a-zA-Z]+$/.test(raw) && len < 3)
+  ) {
+    level = 1;
+  } else {
+    if (categories <= 1) {
+      level = 1;
+    } else if (categories === 2) {
+      level = special ? 3 : 2;
+    } else if (categories === 3) {
+      if (len >= 10 && !isFullySequential(raw)) level = 5;
+      else if (len >= 6) level = isFullySequential(raw) ? 4 : 4;
+      else level = 3;
+    } else if (categories === 4) {
+      if (len > 10 && !isFullySequential(raw)) level = 5;
+      else if (len >= 6) level = 4;
+      else level = 3;
+    } else {
+      level = 1;
+    }
+  }
+
+  if (!noSpaces || !noLongRepeat || !noCommon) {
+    if (level >= 4) level = level - 1;
+    else if (level === 3) level = 2;
+  }
+
+  if (level < 1) level = 1;
+  if (level > 5) level = 5;
+
+  const isValid = level >= 4 && noSpaces && noLongRepeat && noCommon;
+
+  return {
+    checks,
+    score: level,
+    isValid,
+    level,
+    rawLength: len,
+    isSequential: isFullySequential(raw),
+    isAllSame: isAllSame(raw)
+  };
+};
+
 const PasswordStrength = ({ password }) => {
   const validation = useMemo(() => validatePassword(password), [password]);
 
-  const strengthConfig = {
-    0: { bg: 'bg-gray-300', text: 'text-gray-600', label: 'No Password', width: 0 },
-    1: { bg: 'bg-red-500', text: 'text-red-600', label: 'Very Weak', width: 15 },
-    2: { bg: 'bg-red-400', text: 'text-red-500', label: 'Weak', width: 30 },
-    3: { bg: 'bg-orange-500', text: 'text-orange-600', label: 'Fair', width: 45 },
-    4: { bg: 'bg-yellow-500', text: 'text-yellow-600', label: 'Good', width: 65 },
-    5: { bg: 'bg-lime-500', text: 'text-lime-600', label: 'Strong', width: 80 },
-    6: { bg: 'bg-green-500', text: 'text-green-600', label: 'Very Strong', width: 100 },
-    7: { bg: 'bg-emerald-500', text: 'text-emerald-600', label: 'Excellent', width: 100 }
+  if (!password) return null;
+
+  const level = validation.level || 1; 
+  const width = level * 20;
+  const colors = {
+    1: "bg-red-500",
+    2: "bg-orange-500",
+    3: "bg-yellow-500",
+    4: "bg-green-500",
+    5: "bg-emerald-500",
+  };
+  const labels = {
+    1: "Very Weak",
+    2: "Weak",
+    3: "Medium",
+    4: "Strong",
+    5: "Very Strong",
   };
 
-  if (!password) return null;
-  const config = strengthConfig[Math.min(validation.score, 7)] || strengthConfig[0];
-  const percentage = config.width;
-
   return (
-    <div className="mt-3 p-4 md:p-5 bg-gray-50 rounded-lg border border-gray-200">
-      <div className="flex items-center gap-3 mb-3">
+    <div className="mt-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
+      <div className="flex items-center gap-3">
         <div className="flex-1 bg-gray-200 rounded-full h-3 overflow-hidden">
           <div
-            className={`h-full rounded-full transition-all duration-500 ease-out ${config.bg}`}
-            style={{ width: `${percentage}%` }}
-            role="progressbar"
-            aria-valuenow={validation.score}
-            aria-valuemin={0}
-            aria-valuemax={7}
-            aria-label={`Password strength: ${config.label}`}
+            className={`h-full rounded-full transition-all duration-500 ${colors[level]}`}
+            style={{ width: `${width}%` }}
           />
         </div>
-        <span className={`text-xs md:text-sm font-semibold ${config.text} min-w-[80px] text-right`}>
-          {config.label}
+        <span className={`text-xs font-semibold ${level <= 2 ? 'text-red-600' : level === 3 ? 'text-yellow-600' : 'text-green-600'}`}>
+          {labels[level]}
         </span>
       </div>
     </div>
   );
 };
 
-// OTP Input
+
+
 const OTPInput = ({ otp, setOtp, error }) => {
   const inputRefs = useRef([]);
 
@@ -108,11 +209,10 @@ const OTPInput = ({ otp, setOtp, error }) => {
             value={digit}
             onChange={(e) => handleChange(e.target.value, index)}
             onKeyDown={(e) => handleKeyDown(e, index)}
-            className={`w-11 h-11 md:w-14 md:h-14 text-center text-lg md:text-xl font-semibold border-2 rounded-xl focus:outline-none focus:ring-2 transition-colors ${
-              error
-                ? 'border-red-300 bg-red-50 focus:border-red-400 focus:ring-red-200'
-                : 'border-gray-300 focus:border-blue-400 focus:ring-blue-200'
-            }`}
+            className={`w-11 h-11 md:w-14 md:h-14 text-center text-lg md:text-xl font-semibold border-2 rounded-xl focus:outline-none focus:ring-2 transition-colors ${error
+              ? 'border-red-300 bg-red-50 focus:border-red-400 focus:ring-red-200'
+              : 'border-gray-300 focus:border-blue-400 focus:ring-blue-200'
+              }`}
             maxLength={1}
             inputMode="numeric"
           />
@@ -131,7 +231,7 @@ const OTPInput = ({ otp, setOtp, error }) => {
 // Main
 export default function SignUpPage({ onSuccess, onError, apiEndpoint = `${BASE_URL}/auth/signup` }) {
   const navigate = useNavigate();
-  const [step, setStep] = useState(1); // 1 = form, 2 = OTP
+  const [step, setStep] = useState(1); 
   const [formData, setFormData] = useState({
     username: '',
     email: '',
@@ -145,7 +245,6 @@ export default function SignUpPage({ onSuccess, onError, apiEndpoint = `${BASE_U
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
 
-  // OTP state
   const [otp, setOtp] = useState(Array(6).fill(''));
   const [resendTimer, setResendTimer] = useState(0);
   const timerRef = useRef(null);
@@ -154,7 +253,6 @@ export default function SignUpPage({ onSuccess, onError, apiEndpoint = `${BASE_U
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
   }, []);
 
-  // Validation
   const validation = useMemo(() => {
     const emailValid = validateEmail(formData.email);
     const usernameValid = validateUsername(formData.username);
@@ -175,10 +273,10 @@ export default function SignUpPage({ onSuccess, onError, apiEndpoint = `${BASE_U
             ? !usernameValid.length
               ? 'Username must be 3-20 characters'
               : !usernameValid.startValid
-              ? 'Username must start with a letter'
-              : !usernameValid.format
-              ? 'Username can only contain letters, numbers, and underscores'
-              : ''
+                ? 'Username must start with a letter'
+                : !usernameValid.format
+                  ? 'Username can only contain letters, numbers, and underscores'
+                  : ''
             : '',
       },
       password: {
@@ -207,7 +305,6 @@ export default function SignUpPage({ onSuccess, onError, apiEndpoint = `${BASE_U
     validation.password.isValid &&
     validation.confirmPassword.isValid;
 
-  // Handlers
   const handleInputChange = useCallback((field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
     setSubmitError('');
@@ -217,7 +314,6 @@ export default function SignUpPage({ onSuccess, onError, apiEndpoint = `${BASE_U
     setTouched((prev) => ({ ...prev, [field]: true }));
   }, []);
 
-  // Step 1 submit now does the signup POST and then moves to OTP
   const handleStep1Submit = async () => {
     setTouched({ email: true, username: true, password: true, confirmPassword: true });
     if (!isStep1Valid) {
@@ -253,18 +349,15 @@ export default function SignUpPage({ onSuccess, onError, apiEndpoint = `${BASE_U
         );
       }
 
-      // provisional token (if backend returns)
       const token = data?.accessToken || data?.token;
       if (token) {
         localStorage.setItem('token', token);
         console.log('Signup step success, provisional token saved:', token);
       }
 
-      // go to OTP step
       setStep(2);
       setOtp(Array(6).fill(''));
 
-      // start resend timer
       setResendTimer(60);
       timerRef.current = setInterval(() => {
         setResendTimer((prev) => {
@@ -286,7 +379,6 @@ export default function SignUpPage({ onSuccess, onError, apiEndpoint = `${BASE_U
     }
   };
 
-  // Resend OTP
   const sendOTP = async () => {
     if (resendTimer > 0) return;
 
@@ -330,7 +422,6 @@ export default function SignUpPage({ onSuccess, onError, apiEndpoint = `${BASE_U
     }
   };
 
-  // Final verify
   const handleFinalSubmit = async () => {
     if (otp.join('').length !== 6) {
       setSubmitError('Please enter the 6-digit verification code.');
@@ -409,7 +500,6 @@ export default function SignUpPage({ onSuccess, onError, apiEndpoint = `${BASE_U
           p-6 md:p-8 lg:p-10
         "
       >
-        {/* Progress */}
         <div className="mb-6 md:mb-8">
           <div className="flex justify-between items-center mb-2">
             <span className="text-xs md:text-sm font-medium text-gray-600">Step {step} of {totalSteps}</span>
@@ -423,7 +513,6 @@ export default function SignUpPage({ onSuccess, onError, apiEndpoint = `${BASE_U
           </div>
         </div>
 
-        {/* Step 1: Basic Info */}
         {step === 1 && (
           <div className="space-y-6 md:space-y-7">
             <div className="text-center mb-4 md:mb-6">
@@ -442,11 +531,10 @@ export default function SignUpPage({ onSuccess, onError, apiEndpoint = `${BASE_U
                 value={formData.email}
                 onChange={(e) => handleInputChange('email', e.target.value)}
                 onBlur={() => handleBlur('email')}
-                className={`w-full px-3.5 py-2.5 md:px-4 md:py-3 border rounded-xl focus:ring-2 focus:outline-none transition-colors ${
-                  validation.email.error
-                    ? 'border-red-300 bg-red-50 focus:ring-red-200 focus:border-red-400'
-                    : 'border-gray-300 focus:ring-blue-200 focus:border-blue-400'
-                }`}
+                className={`w-full px-3.5 py-2.5 md:px-4 md:py-3 border rounded-xl focus:ring-2 focus:outline-none transition-colors ${validation.email.error
+                  ? 'border-red-300 bg-red-50 focus:ring-red-200 focus:border-red-400'
+                  : 'border-gray-300 focus:ring-blue-200 focus:border-blue-400'
+                  }`}
                 placeholder="email@example.com"
                 disabled={isSubmitting}
               />
@@ -458,7 +546,6 @@ export default function SignUpPage({ onSuccess, onError, apiEndpoint = `${BASE_U
               )}
             </div>
 
-            {/* Username */}
             <div>
               <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-2">
                 Username *
@@ -469,11 +556,10 @@ export default function SignUpPage({ onSuccess, onError, apiEndpoint = `${BASE_U
                 value={formData.username}
                 onChange={(e) => handleInputChange('username', e.target.value)}
                 onBlur={() => handleBlur('username')}
-                className={`w-full px-3.5 py-2.5 md:px-4 md:py-3 border rounded-xl focus:ring-2 focus:outline-none transition-colors ${
-                  validation.username.error
-                    ? 'border-red-300 bg-red-50 focus:ring-red-200 focus:border-red-400'
-                    : 'border-gray-300 focus:ring-blue-200 focus:border-blue-400'
-                }`}
+                className={`w-full px-3.5 py-2.5 md:px-4 md:py-3 border rounded-xl focus:ring-2 focus:outline-none transition-colors ${validation.username.error
+                  ? 'border-red-300 bg-red-50 focus:ring-red-200 focus:border-red-400'
+                  : 'border-gray-300 focus:ring-blue-200 focus:border-blue-400'
+                  }`}
                 placeholder="Choose a unique username"
                 disabled={isSubmitting}
               />
@@ -485,7 +571,6 @@ export default function SignUpPage({ onSuccess, onError, apiEndpoint = `${BASE_U
               )}
             </div>
 
-            {/* Password */}
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
                 Password *
@@ -497,11 +582,10 @@ export default function SignUpPage({ onSuccess, onError, apiEndpoint = `${BASE_U
                   value={formData.password}
                   onChange={(e) => handleInputChange('password', e.target.value)}
                   onBlur={() => handleBlur('password')}
-                  className={`w-full px-3.5 py-2.5 md:px-4 md:py-3 pr-12 border rounded-xl focus:ring-2 focus:outline-none transition-colors ${
-                    validation.password.error
-                      ? 'border-red-300 bg-red-50 focus:ring-red-200 focus:border-red-400'
-                      : 'border-gray-300 focus:ring-blue-200 focus:border-blue-400'
-                  }`}
+                  className={`w-full px-3.5 py-2.5 md:px-4 md:py-3 pr-12 border rounded-xl focus:ring-2 focus:outline-none transition-colors ${validation.password.error
+                    ? 'border-red-300 bg-red-50 focus:ring-red-200 focus:border-red-400'
+                    : 'border-gray-300 focus:ring-blue-200 focus:border-blue-400'
+                    }`}
                   placeholder="Create a strong password"
                   disabled={isSubmitting}
                 />
@@ -525,7 +609,6 @@ export default function SignUpPage({ onSuccess, onError, apiEndpoint = `${BASE_U
               )}
             </div>
 
-            {/* Confirm Password */}
             <div>
               <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-2">
                 Confirm Password *
@@ -537,11 +620,10 @@ export default function SignUpPage({ onSuccess, onError, apiEndpoint = `${BASE_U
                   value={formData.confirmPassword}
                   onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
                   onBlur={() => handleBlur('confirmPassword')}
-                  className={`w-full px-3.5 py-2.5 md:px-4 md:py-3 pr-12 border rounded-xl focus:ring-2 focus:outline-none transition-colors ${
-                    validation.confirmPassword.error
-                      ? 'border-red-300 bg-red-50 focus:ring-red-200 focus:border-red-400'
-                      : 'border-gray-300 focus:ring-blue-200 focus:border-blue-400'
-                  }`}
+                  className={`w-full px-3.5 py-2.5 md:px-4 md:py-3 pr-12 border rounded-xl focus:ring-2 focus:outline-none transition-colors ${validation.confirmPassword.error
+                    ? 'border-red-300 bg-red-50 focus:ring-red-200 focus:border-red-400'
+                    : 'border-gray-300 focus:ring-blue-200 focus:border-blue-400'
+                    }`}
                   placeholder="Confirm your password"
                   disabled={isSubmitting}
                 />
@@ -582,7 +664,6 @@ export default function SignUpPage({ onSuccess, onError, apiEndpoint = `${BASE_U
           </div>
         )}
 
-        {/* Step 2: OTP */}
         {step === 2 && (
           <div className="space-y-6 md:space-y-7">
             <div className="text-center mb-4 md:mb-6">
