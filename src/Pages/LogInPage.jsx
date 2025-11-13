@@ -64,13 +64,11 @@ export default function LogInPage({ mode = "user" }) {
       body = null;
     }
 
-    if (!resp.ok) {
-      const msg =
-        (typeof body === "object" && (body?.message || body?.error)) ||
-        (typeof body === "string" && body) ||
-        `Login failed (${resp.status})`;
-      throw new Error(msg);
-    }
+    const msg =
+      (typeof body === "object" && (body?.errorMessage || body?.message || body?.error)) ||
+      (typeof body === "string" && body) ||
+      `Login failed (${resp.status})`;
+
 
     // Normalize output to { token, user }
     let token = null;
@@ -82,11 +80,12 @@ export default function LogInPage({ mode = "user" }) {
       // If server encodes failures inside 200s, try to detect them
       const looksLikeFailure =
         body.success === false ||
+        body.errorMessage ||
         /wrong credential|invalid|failed/i.test(body.message || "") ||
         /wrong credential|invalid|failed/i.test(body.error || "");
 
       if (looksLikeFailure) {
-        throw new Error(body.message || body.error || "Invalid credentials.");
+        throw new Error(body.errorMessage || body.message || body.error || "Invalid credentials.");
       }
 
       token = body.token || body.accessToken || body.jwt || null;

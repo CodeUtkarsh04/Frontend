@@ -1,8 +1,3 @@
-// Components/ConfirmModal.jsx
-import React from "react";
-import Modal from "./ModalUser.jsx"; // if you have a shared Modal, else use the markup below
-// if you don't have a separate Modal component, copy the inner JSX from your file.
-
 export default function ConfirmModal({ open, title = "Confirm", message, busy = false, onConfirm, onCancel }) {
     if (!open) return null;
 

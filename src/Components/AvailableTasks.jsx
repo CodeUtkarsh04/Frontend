@@ -2,9 +2,11 @@
 import React, { useMemo, useState, useEffect, useRef } from "react";
 import {
   MapPin, Calendar, User, Package, IndianRupee,
-  ArrowRight, Phone, Mail, Home, X
+  ArrowRight, Phone, Mail, Home
 } from "lucide-react";
 import AvailableFilters from "./AvailableFilters.jsx";
+import Modal from "../Components/Modal.jsx"; // adjust path if your components folder is elsewhere
+
 
 /* -------------------------------------------------------
    Auth + API config
@@ -68,20 +70,6 @@ function ErrorBanner({ message, onClose }) {
     <div className="mb-4 rounded-lg border border-red-200 bg-red-50 text-red-700 px-3 py-2 flex items-start justify-between">
       <div className="text-sm">{message}</div>
       <button className="ml-4 text-xs underline" onClick={onClose}>Dismiss</button>
-    </div>
-  );
-}
-
-function Modal({ open, onClose, children }) {
-  if (!open) return null;
-  return (
-    <div className="fixed inset-0 z-50">
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="absolute inset-0 flex items-center justify-center p-4">
-        <div className="relative w-full max-w-4xl max-h-[86vh] overflow-auto rounded-2xl bg-white shadow-2xl p-6">
-          {children}
-        </div>
-      </div>
     </div>
   );
 }
@@ -447,7 +435,7 @@ export default function AvailableTasks() {
       )}
 
 
-      <Modal open={!!openTask} onClose={closeModal}>
+      <Modal open={!!openTask} onClose={closeModal} className="max-w-5xl">
 
         {openTask && (
           <>
@@ -458,15 +446,6 @@ export default function AvailableTasks() {
               >
                 {STATUS[openTask.statusKey]?.label || STATUS.pending.label}
               </span>
-              <button
-                onClick={closeModal}
-                aria-label="Close"
-                className="absolute - top-4 right-4 h-10 w-15  flex items-center justify-center rounded-full bg-white shadow-lg ring-1 ring-slate-200  hover:bg-slate-50 hover:shadow-xl hover:ring-slate-300 active:scale-95 text-slate-600 hover:text-slate-800 transition-all duration-200 backdrop-blur-sm cursor-pointer
-"
-              >
-                <X className="h-7 w-7" strokeWidth={2.2} />
-              </button>
-
             </div>
 
             {/* Task details */}
