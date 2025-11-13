@@ -21,28 +21,7 @@ const validateUsername = (username) => {
       /^[a-zA-Z][a-zA-Z0-9_]*$/.test(username),
   };
 };
-const DEFAULT_COMMON = [
-  "password", "123456", "123456789", "qwerty", "abc123", "admin",
-  "letmein", "welcome", "iloveyou", "monkey", "dragon", "baseball"
-];
-
-const hasSequentialRun = (s, runLen = 3) => {
-  if (!s || s.length < runLen) return false;
-  const normalized = s.toLowerCase();
-  for (let i = 0; i <= normalized.length - runLen; i++) {
-   
-    let asc = true;
-    let desc = true;
-    for (let k = 1; k < runLen; k++) {
-      const prev = normalized.charCodeAt(i + k - 1);
-      const cur = normalized.charCodeAt(i + k);
-      asc = asc && (cur === prev + 1);
-      desc = desc && (cur === prev - 1);
-    }
-    if (asc || desc) return true;
-  }
-  return false;
-};
+const DEFAULT_COMMON = ["password", "123456", "123456789", "qwerty", "abc123", "admin","letmein", "welcome", "iloveyou", "monkey", "dragon", "baseball"];
 
 const validatePassword = (password, commonList = DEFAULT_COMMON) => {
   const raw = String(password || "");        
@@ -178,8 +157,6 @@ const PasswordStrength = ({ password }) => {
     </div>
   );
 };
-
-
 
 const OTPInput = ({ otp, setOtp, error }) => {
   const inputRefs = useRef([]);
@@ -352,7 +329,7 @@ export default function SignUpPage({ onSuccess, onError, apiEndpoint = `${BASE_U
       const token = data?.accessToken || data?.token;
       if (token) {
         localStorage.setItem('token', token);
-        console.log('Signup step success, provisional token saved:', token);
+
       }
 
       setStep(2);
@@ -447,9 +424,6 @@ export default function SignUpPage({ onSuccess, onError, apiEndpoint = `${BASE_U
       );
 
       const raw = await response.text();
-      console.log('Raw backend response:', raw);
-      console.log('Response Content-Type:', response.headers.get('content-type'));
-
       if (!response.ok) {
         const msg = raw?.trim() || `Server error: ${response.status}`;
         throw new Error(msg);
@@ -457,9 +431,6 @@ export default function SignUpPage({ onSuccess, onError, apiEndpoint = `${BASE_U
 
       let token = (raw || '').trim().replace(/^"(.*)"$/, '$1');
       if (!token) throw new Error('No token found in response.');
-
-      console.log('Verification success, final token saved:', token);
-
       try {
         const { setAuth, fetchMe } = await import('../auth');
         setAuth({ token });
