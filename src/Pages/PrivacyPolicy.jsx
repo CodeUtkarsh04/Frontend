@@ -71,8 +71,6 @@ export default function PrivacyPolicy() {
           </h2>
           <ul className="list-disc list-inside space-y-2 text-slate-600">
             <li>Personal details: name, phone number, email, address.</li>
-            <li>Identity verification data (e.g., ID proof, selfie, etc.).</li>
-            <li>Payment details: UPI/Bank info (processed via secure third parties).</li>
             <li>Usage data: app interactions, task history, ratings, device/IP logs.</li>
           </ul>
         </section>
@@ -155,29 +153,40 @@ export default function PrivacyPolicy() {
           </p>
         </section>
 
-        {/* 9 */}
-        <section ref={addToRefs} className="transition-all duration-700">
-          <h2 className="text-2xl font-extrabold text-slate-900 mb-4">
-            9. Grievance Redressal
-          </h2>
-          <div className="mt-3 rounded-xl border border-slate-200 p-4 text-slate-700">
-            <p><span className="font-semibold">Grievance Officer:</span> [Name]</p>
-            <p><span className="font-semibold">Email:</span> grievance@dailydone.in</p>
-            <p><span className="font-semibold">Address:</span> [Full Address, City, State, PIN, India]</p>
-            <p><span className="font-semibold">Working Hours:</span> Mon–Fri, 10:00–18:00 IST</p>
-          </div>
-        </section>
-
         {/* 10 */}
         <section ref={addToRefs} className="transition-all duration-700">
           <h2 className="text-2xl font-extrabold text-slate-900 mb-4">
-            10. Changes to this Policy
+            9. Changes to this Policy
           </h2>
           <p className="text-lg text-slate-600">
             We may update this Privacy Policy from time to time. The latest version
             will always be available on this page, with the “Last Updated” date shown.
           </p>
+        </section>4{/* 10 */}
+        <section ref={addToRefs} className="transition-all duration-700">
+          <h2 className="text-2xl font-extrabold text-slate-900 mb-4">
+            10. Contact & Grievance Redressal
+          </h2>
+
+          <p className="text-lg text-slate-600">
+            If you have any questions, concerns, or complaints regarding this Privacy
+            Policy or how your personal data is handled, you may contact our designated
+            Grievance Officer. We will acknowledge your request within 24–72 working hours
+            and aim to resolve most concerns within 7–15 business days, as required under
+            applicable Indian data protection laws.
+          </p>
+
+          <div className="mt-4 border border-slate-200 rounded-lg p-4 text-slate-700">
+            <p><span className="font-semibold">Email:</span> grievance@dailydone.in</p>
+            <p><span className="font-semibold">Working Hours:</span> Mon–Fri, 10:00 AM – 6:00 PM IST</p>
+          </div>
+
+          <p className="mt-4 text-lg text-slate-600">
+            If you are not satisfied with our response, you may escalate the matter to
+            the appropriate authority under the Digital Personal Data Protection Act, 2023.
+          </p>
         </section>
+
 
         {/* Closing */}
         <section ref={addToRefs} className="transition-all duration-700 text-center">

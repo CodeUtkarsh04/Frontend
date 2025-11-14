@@ -55,8 +55,8 @@ export default function HelpPage() {
               </div>
 
               <div>
-                <h3 className="text-sm text-slate-500">Business / Partnerships</h3>
-                <a href="mailto:partnerships@dailydone.com" className="text-blue-800 font-medium">partnerships@dailydone.com</a>
+                <h3 className="text-sm text-slate-500">Mobile No.</h3>
+                <a href="mailto:partnerships@dailydone.com" className="text-blue-800 font-medium">+91 9769910887</a>
               </div>
             </div>
 

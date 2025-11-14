@@ -146,9 +146,7 @@ export default function RatingModal({
 
   // IMPORTANT: ensure hooks above always run in the same order.
   // Only *after* declaring all hooks we decide whether to render or return null.
-  if (!visible) {
-    console.log("RatingModal hidden (visible=false)");
-    return null;
+  if (!visible) {    return null;
   }
 
   // pointer-based rating (works for mouse & touch)

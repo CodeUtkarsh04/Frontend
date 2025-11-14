@@ -5,10 +5,10 @@ import Layout from "./Pages/Layout";
 import AuthLayout from "./Pages/AuthLayout.jsx";
 import LandingPage from "./Pages/LandingPage.jsx";
 import TasksPage from "./Pages/TasksPage.jsx";
-import ServicesPage from "./Pages/ServicesPage";
+import ServicesPage from "./Pages/Services.jsx";
 import RequestPage from "./Pages/RequestPage";
 import NotFound from "./Pages/NotFound";
-import HowDDWorks from "./Components/HowDDWorks.jsx";
+import HowDDwork from "./Pages/How.jsx";
 import SignUpPage from "./Pages/SignUpPage.jsx";
 import LogInPage from "./Pages/LogInPage.jsx";
 import AboutDailyDone from "./Pages/AboutDailyDone.jsx";
@@ -31,6 +31,9 @@ import HelperTaskPage from "./Components/HelperTaskPage.jsx";
 import CommunityGuidelines from "./Pages/CommunityGuidelines.jsx";
 import TermsAndConditions from "./Pages/TermsAndConditions.jsx";
 import PrivacyPolicy from "./Pages/PrivacyPolicy.jsx";
+import Cookie from "./Pages/Cookie.jsx";
+
+
 
 export default function App() {
   return (
@@ -42,22 +45,21 @@ export default function App() {
         <Route path="tasks" element={<TasksPage />} />
         <Route path="services" element={<ServicesPage />} />
         <Route path="request" element={<RequestPage />} />
-        <Route path="how" element={<HowDDWorks />} />
+        <Route path="how" element={<HowDDwork />} />
         <Route path="about" element={<AboutDailyDone />} />
         <Route path="help" element={<HelpPage />} />
         <Route path="recent-tasks" element={<UserTasksPage />} />
         <Route path="community-guidelines" element={<CommunityGuidelines />} />
         <Route path="terms" element={<TermsAndConditions />} />
         <Route path="privacy" element={<PrivacyPolicy />} />
-  
+        <Route path="cookie" element={<Cookie />} />
       </Route>
 
       {/* Auth (public) — ONLY signup/login under AuthLayout */}
       <Route element={<AuthLayout />}>
         <Route path="login" element={<LogInPage mode="user" />} />
         <Route path="helper/login" element={<LogInPage mode="helper" />} />
-         <Route path="signup" element={<SignUpPage mode="user" />} />
-        <Route path="login" element={<LogInPage mode="helper" />} />
+        <Route path="signup" element={<SignUpPage mode="user" />} />
       </Route>
 
       {/* Setup flow (JWT required, any role) */}
@@ -82,7 +84,7 @@ export default function App() {
       <Route
         path="/user"
         element={
-          <ProtectedRoute allowed={["user","helper"]}>
+          <ProtectedRoute allowed={["user", "helper"]}>
             <UserDashLayout />
           </ProtectedRoute>
         }
@@ -106,14 +108,14 @@ export default function App() {
       <Route
         path="/helper/dashboard"
         element={
-          <ProtectedRoute allowed={["user","helper"]}>
+          <ProtectedRoute allowed={["user", "helper"]}>
             <HelperDashLayout />
           </ProtectedRoute>
         }
       >
         <Route index element={<HelperDashboard />} />
         <Route path="tasks" element={<HelperTaskPage />} />
-         <Route path="profile" element={<Profile />} />
+        <Route path="profile" element={<Profile />} />
       </Route>
 
       {/* 404 */}

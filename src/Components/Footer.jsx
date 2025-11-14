@@ -12,8 +12,6 @@ const Footer = () => {
               <li><a href="about" className="text-slate-300 hover:text-white transition-colors duration-200">About DailyDone</a></li>
               <li><a href="how" className="text-slate-300 hover:text-white transition-colors duration-200">How it works</a></li>
               <li><a href="how" className="text-slate-300 hover:text-white transition-colors duration-200">Careers</a></li>
-              <li><a href="#" className="text-slate-300 hover:text-white transition-colors duration-200">Press</a></li>
-              <li><a href="#" className="text-slate-300 hover:text-white transition-colors duration-200">Blog</a></li>
             </ul>
           </div>
           
@@ -29,10 +27,8 @@ const Footer = () => {
             <h3 className="text-lg text-blue-400 font-bold mb-5">Support</h3>
             <ul className="space-y-3">
               <li><a href="help" className="text-slate-300 hover:text-white transition-colors duration-200">Help Center</a></li>
-              <li><a href="help" className="text-slate-300 hover:text-white transition-colors duration-200">Safety</a></li>
               <li><a href="help" className="text-slate-300 hover:text-white transition-colors duration-200">Contact us</a></li>
-              <li><a href="#" className="text-slate-300 hover:text-white transition-colors duration-200">Trust & Safety</a></li>
-              <li><a href="CommunityGuidelines" className="text-slate-300 hover:text-white transition-colors duration-200">Community guidelines</a></li>
+              <li><a href="community-guidelines" className="text-slate-300 hover:text-white transition-colors duration-200">Community guidelines</a></li>
             </ul>
           </div>
           <div>
@@ -40,7 +36,7 @@ const Footer = () => {
             <ul className="space-y-3">
               <li><a href="terms" className="text-slate-300 hover:text-white transition-colors duration-200">Terms and Conditions</a></li>
               <li><a href="privacy" className="text-slate-300 hover:text-white transition-colors duration-200">Privacy Policy</a></li>
-              <li><a href="#" className="text-slate-300 hover:text-white transition-colors duration-200">Cookie policy</a></li>
+              <li><a href="cookie" className="text-slate-300 hover:text-white transition-colors duration-200">Cookie policy</a></li>
             </ul>
           </div>
         </div>

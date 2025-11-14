@@ -52,7 +52,7 @@ async function fetchJSON(path, opts = {}) {
     console.error("🔥 [HELPER-PAGE/HTTP] Error:", err.message);
     throw err;
   }
-  
+
   if (!raw) {
     console.warn("⚠️ [HELPER-PAGE/HTTP] Empty body");
     return null;
@@ -109,12 +109,12 @@ function shapeUserProfileId(up) {
     phone: up.phone ?? null,
     userid: up.userid
       ? {
-          id: up.userid.id ?? null,
-          username: up.userid.username ?? null,
-          email: up.userid.email ?? null,
-          password: up.userid.password ?? null,
-          roleId: up.userid.roleId ?? null,
-        }
+        id: up.userid.id ?? null,
+        username: up.userid.username ?? null,
+        email: up.userid.email ?? null,
+        password: up.userid.password ?? null,
+        roleId: up.userid.roleId ?? null,
+      }
       : null,
     age: up.age ?? null,
     earning: toNumOrNull(up.earning ?? 0),
@@ -138,32 +138,32 @@ function shapeTaskRow(x) {
 
     customerId: x.customerId
       ? {
-          id: x.customerId.id ?? null,
-          username: x.customerId.username ?? null,
-          email: x.customerId.email ?? null,
-          password: x.customerId.password ?? null,
-          roleId: x.customerId.roleId ?? null,
-        }
+        id: x.customerId.id ?? null,
+        username: x.customerId.username ?? null,
+        email: x.customerId.email ?? null,
+        password: x.customerId.password ?? null,
+        roleId: x.customerId.roleId ?? null,
+      }
       : null,
 
     runnerId: x.runnerId ?? x.helperId ?? null,
 
     categoryId: x.categoryId
       ? {
-          id: x.categoryId.id ?? null,
-          name: x.categoryId.name ?? null,
-        }
+        id: x.categoryId.id ?? null,
+        name: x.categoryId.name ?? null,
+      }
       : null,
 
     pickupAddressId: x.pickupAddressId
       ? {
-          id: x.pickupAddressId.id ?? null,
-          address: x.pickupAddressId.address ?? null,
-          location: x.pickupAddressId.location ?? null,
-          latitude: x.pickupAddressId.latitude ?? null,
-          longitude: x.pickupAddressId.longitude ?? null,
-          userId: x.pickupAddressId.userId ?? null,
-        }
+        id: x.pickupAddressId.id ?? null,
+        address: x.pickupAddressId.address ?? null,
+        location: x.pickupAddressId.location ?? null,
+        latitude: x.pickupAddressId.latitude ?? null,
+        longitude: x.pickupAddressId.longitude ?? null,
+        userId: x.pickupAddressId.userId ?? null,
+      }
       : null,
 
     userProfileId: shapeUserProfileId(x.userProfileId),
@@ -175,6 +175,64 @@ function shapeTaskRow(x) {
   };
   return shaped;
 }
+
+// ---------- Robust category extraction & matching ----------
+function norm(s) {
+  return (s ?? "").toString().trim().replace(/\s+/g, " ").replace(/&/g, "and").toLowerCase();
+}
+
+function extractCategoryNames(explicitCat, task) {
+  const candidates = [];
+  const pushVal = (v) => {
+    if (v == null) return;
+    if (Array.isArray(v)) return v.forEach(pushVal);
+    if (typeof v === "object") {
+      const name = v.name ?? v.title ?? v.label ?? v.slug ?? v.value ?? v.key;
+      if (name) candidates.push(String(name));
+      else {
+        try { candidates.push(JSON.stringify(v)); } catch (e) { }
+      }
+      return;
+    }
+    candidates.push(String(v));
+  };
+
+  if (explicitCat !== undefined && explicitCat !== null && explicitCat !== "") pushVal(explicitCat);
+
+  if ((!explicitCat || explicitCat === "") && task) {
+    const keysToCheck = [
+      "category", "categories", "cat", "type", "types",
+      "tags", "tag", "service", "services", "meta",
+      "category_id", "categoryId", "catId", "categorySlug", "category_name"
+    ];
+    for (const k of keysToCheck) if (Object.prototype.hasOwnProperty.call(task, k)) pushVal(task[k]);
+
+    if (task.category && typeof task.category === "object") pushVal(task.category.name ?? task.category.title ?? task.category.label);
+    if (Array.isArray(task.categories)) task.categories.forEach(c => pushVal(c.name ?? c.title ?? c));
+    if (Array.isArray(task.tags)) task.tags.forEach(t => pushVal(t.name ?? t.label ?? t));
+    if (task.service) pushVal(task.service.name ?? task.service.title ?? task.service);
+    if (task.details && task.details.category) pushVal(task.details.category);
+  }
+
+  return Array.from(new Set(candidates.map(c => c && c.toString()).filter(Boolean)));
+}
+
+function matchesCategory(taskCategory, filterCategory, task) {
+  if (!filterCategory || filterCategory === "All Categories") return true;
+  const wanted = norm(filterCategory);
+  const rawCandidates = (taskCategory && taskCategory !== "" ? extractCategoryNames(taskCategory, task) : extractCategoryNames(null, task));
+  const candidates = rawCandidates.map(norm).filter(Boolean);
+  return candidates.some(c => {
+    if (c === wanted) return true;
+    if (c.includes(wanted)) return true;
+    if (wanted.includes(c)) return true;
+    const cs = c.replace(/[^a-z0-9]/g, "");
+    const ws = wanted.replace(/[^a-z0-9]/g, "");
+    if (cs && ws && (cs === ws || cs.includes(ws) || ws.includes(cs))) return true;
+    return false;
+  });
+}
+
 
 /* -------------------------------------------------------
    Page: HelperTaskPage
@@ -192,6 +250,7 @@ export default function HelperTaskPage() {
   const [showFilters, setShowFilters] = useState(false);
 
   // data states
+  const [allTasksShaped, setAllTasksShaped] = useState([]);
   const [tasks, setTasks] = useState([]);
   const [meta, setMeta] = useState({ page: 1, pages: 1, total: 0, limit: PAGE_SIZE });
   const [loading, setLoading] = useState(true);
@@ -223,19 +282,16 @@ export default function HelperTaskPage() {
         throw new Error("VITE_API_BASE_URL is not set. Configure your API base URL.");
       }
 
-      const path = `${LIST_ENDPOINT}${qs ? `?${qs}` : ""}`;
-      console.log("🚀 [HELPER-PAGE/RUN] fetching:", path, "full:", `${API_BASE}${path}`);
+      const path = `${LIST_ENDPOINT}`;
 
       const json = await fetchJSON(path);
 
-      // Extract rows (backend might return either array or { data: [...] })
       const rows = Array.isArray(json) ? json : (json?.data ?? []);
-      console.log("📊 [HELPER-PAGE/DATA] raw rows:", rows.length);
 
       const shaped = rows.map(shapeTaskRow).filter(Boolean);
-      console.log("🧱 [HELPER-PAGE/SHAPED] rows:", shaped.length, "sample[0]:", shaped[0]);
 
-      // Use backend meta if present, otherwise client-side paginate
+      setAllTasksShaped(shaped);
+
       const backendMeta = Array.isArray(json) ? null : (json?.meta ?? null);
 
       if (backendMeta && typeof backendMeta.total === "number") {
@@ -249,15 +305,9 @@ export default function HelperTaskPage() {
           limit: backendMeta.limit ?? filters.limit,
         });
       } else {
-        // Client-side pagination
-        const total = shaped.length;
-        const pages = Math.max(1, Math.ceil(total / filters.limit));
-        const safePage = Math.min(Math.max(1, filters.page), pages);
-        const start = (safePage - 1) * filters.limit;
-        const pageRows = shaped.slice(start, start + filters.limit);
-        setTasks(pageRows);
-        setMeta({ page: safePage, pages, total, limit: filters.limit });
+        setMeta({ page: 1, pages: 1, total: shaped.length, limit: filters.limit });
       }
+
 
       failCountRef.current = 0;
       console.log("✅ [HELPER-PAGE/RUN] done. tasks:", shaped.length);
@@ -278,6 +328,57 @@ export default function HelperTaskPage() {
       setLoading(false);
     }
   }, [qs, filters.page, filters.limit, filters]);
+
+  // ----------------- client-side filtering (compute filteredTasks) -----------------
+  const filteredTasks = useMemo(() => {
+    const s = filters.status ?? "All";
+    const c = filters.category ?? "All Categories";
+    const q = (filters.search ?? "").toString().trim().toLowerCase();
+
+    const filtered = allTasksShaped.filter(t => {
+      if (!t) return false;
+
+      // status: normalized equality
+      if (s && s !== "All") {
+        if (norm(t.status ?? t.raw?.status ?? "") !== norm(s)) return false;
+      }
+
+      // category: tolerant matching (uses matchesCategory)
+      if (c && c !== "All Categories") {
+        const taskCategoryField = t.categoryId?.name ?? t.raw?.category ?? t.categoryId ?? t.raw;
+        if (!matchesCategory(taskCategoryField, c, t.raw ?? t)) return false;
+      }
+
+      // search (title/description/category)
+      const taskCategoryValue = Array.isArray(t.categoryId) ? t.categoryId.join(" ") : (t.categoryId?.name ?? t.raw?.category ?? "");
+      const hay = `${t.title ?? ""} ${t.description ?? ""} ${taskCategoryValue}`.toLowerCase();
+      if (q && !hay.includes(q)) return false;
+
+      return true;
+    });
+
+    console.log("DEBUG Helper: filters:", filters);
+    console.log("DEBUG Helper: filtered count:", filtered.length);
+    console.log("DEBUG Helper: filtered sample cats:", filtered.slice(0, 8).map(x => extractCategoryNames(x.categoryId ?? x.raw?.category, x.raw)));
+    return filtered;
+  }, [allTasksShaped, filters.status, filters.category, filters.search]);
+
+  // ----------------- paginate filteredTasks into tasks for rendering -----------------
+  useEffect(() => {
+    const total = filteredTasks.length;
+    const pages = Math.max(1, Math.ceil(total / filters.limit));
+    const safePage = Math.min(Math.max(1, filters.page || 1), pages);
+    const start = (safePage - 1) * filters.limit;
+    const pageRows = filteredTasks.slice(start, start + filters.limit);
+
+    setTasks(pageRows);
+    setMeta({ page: safePage, pages, total, limit: filters.limit });
+
+    if ((filters.page || 1) !== safePage) {
+      setFilters(f => ({ ...f, page: safePage }));
+    }
+  }, [filteredTasks, filters.page, filters.limit]);
+
 
   // initial load + polling + visibility handler
   useEffect(() => {
@@ -333,7 +434,7 @@ export default function HelperTaskPage() {
           {/* Sidebar filters (desktop) */}
           <aside className="hidden md:block w-64 min-w-[16rem] shrink-0">
             <div className="sticky top-24">
-              <Filters onFilterChange={handleFilterChange} />
+              <Filters filters={filters} onFilterChange={handleFilterChange} />
             </div>
           </aside>
 
@@ -371,8 +472,8 @@ export default function HelperTaskPage() {
                   {error.status === 401
                     ? "Please sign in to view available errands."
                     : typeof error.message === "string"
-                    ? error.message
-                    : "An unexpected error occurred while loading errands."}
+                      ? error.message
+                      : "An unexpected error occurred while loading errands."}
                 </p>
                 {error.status === 401 ? (
                   <button
@@ -439,11 +540,10 @@ export default function HelperTaskPage() {
                           <button
                             key={pageNum}
                             onClick={() => setFilters((f) => ({ ...f, page: pageNum }))}
-                            className={`w-10 h-10 rounded-lg font-medium transition ${
-                              isActive
-                                ? "bg-blue-600 text-white"
-                                : "border border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
-                            }`}
+                            className={`w-10 h-10 rounded-lg font-medium transition ${isActive
+                              ? "bg-blue-600 text-white"
+                              : "border border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+                              }`}
                           >
                             {pageNum}
                           </button>
@@ -454,9 +554,8 @@ export default function HelperTaskPage() {
                           <span className="px-2 text-slate-400">...</span>
                           <button
                             onClick={() => setFilters((f) => ({ ...f, page: meta.pages }))}
-                            className={`w-10 h-10 rounded-lg font-medium border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 transition ${
-                              meta.page === meta.pages ? "bg-blue-600 text-white" : ""
-                            }`}
+                            className={`w-10 h-10 rounded-lg font-medium border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 transition ${meta.page === meta.pages ? "bg-blue-600 text-white" : ""
+                              }`}
                           >
                             {meta.pages}
                           </button>
@@ -510,15 +609,15 @@ export default function HelperTaskPage() {
       {/* Mobile Filters Modal */}
       {showFilters && (
         <div className="fixed inset-0 z-50 flex md:hidden">
-          <div 
-            onClick={() => setShowFilters(false)} 
+          <div
+            onClick={() => setShowFilters(false)}
             className="absolute inset-0 bg-black/50 backdrop-blur-sm"
           />
           <div className="relative bg-white w-full max-w-sm h-full shadow-2xl ml-auto overflow-auto">
             <div className="sticky top-0 bg-white border-b border-gray-200 p-4 flex items-center justify-between z-10">
               <h3 className="text-lg font-bold text-gray-900">Filters</h3>
-              <button 
-                onClick={() => setShowFilters(false)} 
+              <button
+                onClick={() => setShowFilters(false)}
                 className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 transition"
               >
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">

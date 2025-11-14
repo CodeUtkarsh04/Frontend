@@ -1,7 +1,7 @@
 import React from 'react';
 
 export default function FaqHelper() {
-   const helperFaqs = [
+  const helperFaqs = [
     { q: 'How do I sign up as a helper on DailyDone?', a: 'Visit the "Become a Helper" page, complete the registration form, upload required documents (ID, address proof), and complete our verification process.' },
     { q: 'What documents do I need to become a helper?', a: 'You need a valid government ID (Aadhaar/PAN/Passport), address proof, and a recent photograph. Some task categories may require additional certifications.' },
     { q: 'How long does the verification process take?', a: 'Verification typically takes 2-3 business days. We will notify you via SMS and email once your profile is approved.' },
@@ -50,19 +50,12 @@ export default function FaqHelper() {
 
             <div className="space-y-3">
               <div>
-                <h3 className="text-sm text-slate-500">Phone</h3>
-                <a href="tel:+911234567890" className="text-blue-800 font-medium">+91 12345 67891</a>
-              </div>
-
-              <div>
                 <h3 className="text-sm text-slate-500">Email</h3>
                 <a href="mailto:support@dailydone.com" className="text-blue-800 font-medium">helper@dailydone.com</a>
               </div>
-
               <div>
-                <h3 className="text-sm text-slate-500">Emergency Support</h3>
-                <a href="mailto:partnerships@dailydone.com" className="text-red-800 font-medium">+91 12345 67892</a>
-                <p className="text-xs text-slate-500 mt-1">For urgent safety concerns</p>
+                <h3 className="text-sm text-slate-500">Phone</h3>
+                <a href="tel:+911234567890" className="text-blue-800 font-medium">+91 97699 10887</a>
               </div>
             </div>
 

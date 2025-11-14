@@ -290,71 +290,112 @@ export default function SignUpPage({ onSuccess, onError, apiEndpoint = `${BASE_U
   const handleBlur = useCallback((field) => {
     setTouched((prev) => ({ ...prev, [field]: true }));
   }, []);
+const handleStep1Submit = async () => {
+  setTouched({ email: true, username: true, password: true, confirmPassword: true });
+  if (!isStep1Valid) {
+    setSubmitError('Please correct the errors above');
+    return;
+  }
 
-  const handleStep1Submit = async () => {
-    setTouched({ email: true, username: true, password: true, confirmPassword: true });
-    if (!isStep1Valid) {
-      setSubmitError('Please correct the errors above');
+  setIsSubmitting(true);
+  setSubmitError('');
+
+  try {
+    const payload = {
+      username: formData.username.trim(),
+      email: formData.email.trim(),
+      password: formData.password,
+    };
+
+    const response = await fetch(apiEndpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
+
+    // Read raw response text so we can handle plain text or JSON consistently
+    const rawText = await response.text();
+    let data = null;
+    try {
+      data = rawText ? JSON.parse(rawText) : null;
+    } catch (e) {
+      data = null;
+    }
+
+    // Build normalized backend message from possible places
+    const candidate =
+      (data && (data.message || data.errorMessage)) ||
+      rawText ||
+      '';
+
+    const backendMsg = String(candidate).toLowerCase();
+
+    // check status codes commonly used for conflicts/pending (adjust if your backend uses others)
+    const status = response.status;
+
+    // Detection
+    const isEmailExist =
+      backendMsg.includes('email already exist') ||
+      backendMsg.includes('email already exists') ||
+      (backendMsg.includes('exist') && backendMsg.includes('email')) ||
+      status === 409; // often used for conflict
+
+    const isEmailPending =
+      backendMsg.includes('email already pending') ||
+      backendMsg.includes('already pending') ||
+      (backendMsg.includes('pending') && backendMsg.includes('email')) ||
+      status === 423; // optionally: 423 Locked or use whatever status your API uses for pending
+
+    if (isEmailExist) {
+      setSubmitError('Email already exist, Use Different Mail');
+      setIsSubmitting(false);
       return;
     }
 
-    setIsSubmitting(true);
-    setSubmitError('');
-
-    try {
-      const payload = {
-        username: formData.username.trim(),
-        email: formData.email.trim(),
-        password: formData.password,
-      };
-
-      const response = await fetch(apiEndpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Accept: 'application/json',
-        },
-        body: JSON.stringify(payload),
-      });
-
-      let data = null;
-      try { data = await response.json(); } catch (e) {}
-
-      if (!response.ok) {
-        throw new Error(
-          (data && (data.message || data.errorMessage)) || `Server error: ${response.status}`
-        );
-      }
-
-      const token = data?.accessToken || data?.token;
-      if (token) {
-        localStorage.setItem('token', token);
-
-      }
-
-      setStep(2);
-      setOtp(Array(6).fill(''));
-
-      setResendTimer(60);
-      timerRef.current = setInterval(() => {
-        setResendTimer((prev) => {
-          if (prev <= 1) {
-            clearInterval(timerRef.current);
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-    } catch (error) {
-      const errorMessage =
-        error.message === 'Failed to fetch'
-          ? 'Network error. Please check your connection and try again.'
-          : error.message;
-      setSubmitError(errorMessage);
-    } finally {
+    if (isEmailPending) {
+      setSubmitError('Email already Pending, Please try again later');
       setIsSubmitting(false);
+      return;
     }
-  };
+
+    // If response not OK and we didn't hit the above special cases, show generic error (including backend text)
+    if (!response.ok) {
+      const fallback = backendMsg || `Server error: ${status}`;
+      throw new Error(fallback);
+    }
+
+    // If OK: parse token if present
+    const token = (data && (data.accessToken || data.token)) || null;
+    if (token) localStorage.setItem('token', token);
+
+    // proceed to OTP step
+    setStep(2);
+    setOtp(Array(6).fill(''));
+
+    setResendTimer(60);
+    timerRef.current = setInterval(() => {
+      setResendTimer((prev) => {
+        if (prev <= 1) {
+          clearInterval(timerRef.current);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  } catch (error) {
+    const errorMessage =
+      error.message === 'Failed to fetch'
+        ? 'Network error. Please check your connection and try again.'
+        : error.message || 'An unexpected error occurred';
+    setSubmitError(errorMessage);
+  } finally {
+    setIsSubmitting(false);
+  }
+};
+
 
   const sendOTP = async () => {
     if (resendTimer > 0) return;

@@ -137,17 +137,7 @@ export default function RatingModal({
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [onKey]);
-
-  // helpful dev log to see what modal received
-  // (note: this is a hook — must run on every render for stable hook order)
-  useEffect(() => {
-    console.log("RatingModal props:", { userId, targetId, userName, visible });
-  }, [userId, targetId, userName, visible]);
-
-  // IMPORTANT: ensure hooks above always run in the same order.
-  // Only *after* declaring all hooks we decide whether to render or return null.
   if (!visible) {
-    console.log("RatingModal hidden (visible=false)");
     return null;
   }
 

@@ -1,16 +1,23 @@
 import React, { useEffect, useRef } from 'react';
 import OurStory from '../assets/OurStory.jpg';
 import ConnectPeople from '../assets/ConnectPeople.jpg';
-import Community from '../assets/Community.jpg';  
+import Community from '../assets/Community.jpg';
+import YashPhoto from '../assets/yash.jpg';
+import UtkarshPhoto from '../assets/utkarsh.jpg';
+import RajeshPhoto from '../assets/rajesh.jpg';
 
-// AboutDailyDone.jsx
-// Single-file React component using Tailwind CSS utility classes.
-// Drop this component into your React app (e.g. src/components/AboutDailyDone.jsx)
-// Make sure Tailwind is configured in your project.
+// helper for initials fallback
+function getInitials(name = '') {
+  return name
+    .split(' ')
+    .map(n => n[0] || '')
+    .slice(0, 2)
+    .join('')
+    .toUpperCase();
+}
 
 export default function AboutDailyDone() {
-  const sectionsRef = useRef([]);
-  sectionsRef.current = [];
+  const sectionsRef = useRef([]); // don't reset this on every render
 
   const addToRefs = (el) => {
     if (el && !sectionsRef.current.includes(el)) {
@@ -34,8 +41,11 @@ export default function AboutDailyDone() {
     );
 
     sectionsRef.current.forEach((el) => {
-      el.classList.add('opacity-0', 'translate-y-6');
-      io.observe(el);
+      // guard just in case
+      if (el && el.classList) {
+        el.classList.add('opacity-0', 'translate-y-6');
+        io.observe(el);
+      }
     });
 
     return () => io.disconnect();
@@ -54,19 +64,22 @@ export default function AboutDailyDone() {
 
   const team = [
     {
-      name: 'Yashraj Deshmukh',
-      role: 'Founder & CEO',
-      bio: 'Former product leader with a passion for building technology that brings communities together and solves real problems.',
+      name: "Yashraj Deshmukh",
+      role: "Co-Founder & Tech Lead",
+      photo: YashPhoto,
+      bio: "Handles the technical development and backend logic. Passionate about building simple solutions for real local problems."
     },
     {
-      name: 'Utkarsh Gade',
-      role: 'Head of Engineering',
-      bio: 'Full-stack engineer with 10+ years building scalable platforms that millions of users trust and rely on daily.',
+      name: "Utkarsh Gade",
+      role: "Co-Founder, Business & Frontend Lead",
+      photo: UtkarshPhoto,
+      bio: "Manages the business side, customer needs, and frontend development. Driven to turn the idea into a real, working product."
     },
     {
-      name: 'Rajesh Kulkarni',
-      role: 'VP of Design',
-      bio: 'User experience designer who believes great products should feel intuitive, delightful, and accessible to everyone.',
+      name: "Rajesh Kulkarni",
+      role: "Co-Founder & UI/UX Lead",
+      photo: RajeshPhoto,
+      bio: "Designs clean and user-friendly interfaces. Focused on making the product easy and intuitive for everyone."
     },
   ];
 
@@ -77,7 +90,6 @@ export default function AboutDailyDone() {
         id="hero-section"
         className="relative overflow-hidden bg-gradient-to-br from-blue-900 to-sky-400 text-white py-24 mt-15"
       >
-        {/* subtle grain-ish overlay */}
         <div className="absolute inset-0 opacity-20 pointer-events-none" aria-hidden>
           <div className="w-full h-full bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-white/6 to-transparent" />
         </div>
@@ -114,16 +126,15 @@ export default function AboutDailyDone() {
               </p>
             </div>
 
-           <img 
+            <img
               src={OurStory}
-              alt="Our Story" 
+              alt="Our Story"
               className="rounded-2xl border-2 border-dashed border-gray-300 object-cover h-100 w-full"
-          />
-
+            />
           </div>
         </section>
 
-        {/* What We Do (reverse layout on wide screens) */}
+        {/* What We Do */}
         <section
           ref={addToRefs}
           className="content-section mb-16 transition-all duration-700"
@@ -142,9 +153,9 @@ export default function AboutDailyDone() {
               </p>
             </div>
 
-            <img 
+            <img
               src={ConnectPeople}
-              alt="Connecting People" 
+              alt="Connecting People"
               className="rounded-2xl border-2 border-dashed border-gray-300 object-cover h-110 w-full"
             />
           </div>
@@ -183,7 +194,6 @@ export default function AboutDailyDone() {
               </div>
             </div>
 
-            {/* decorative overlay to mimic subtle grain */}
             <div className="pointer-events-none absolute inset-0 opacity-20"></div>
           </div>
         </section>
@@ -221,10 +231,9 @@ export default function AboutDailyDone() {
               </p>
             </div>
 
-            
-            <img 
+            <img
               src={Community}
-              alt="Community" 
+              alt="Community"
               className="rounded-2xl border-2 border-dashed border-gray-300 object-cover h-110 w-full"
             />
           </div>
@@ -236,18 +245,30 @@ export default function AboutDailyDone() {
           className="content-section mb-16 transition-all duration-700"
         >
           <div className="team-section text-center">
-            <h2 className="text-3xl font-extrabold text-slate-900 mb-4">Meet Our Team</h2>
-            <p className="text-lg text-slate-500 max-w-2xl mx-auto mb-8">
-              We're a diverse group of builders, dreamers, and community advocates united by
-              our passion for connecting people and solving everyday problems.
+            <h2 className="text-3xl font-extrabold text-slate-900 mb-4">Meet Our Founder</h2>
+            <p className="text-lg text-slate-500 max-w-3xl mx-auto mb-8">
+              We're a young team passionate about building practical solutions that make everyday help more accessible within local communities.
             </p>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               {team.map((member) => (
-                <div key={member.name} className="team-card bg-white border border-slate-200 rounded-2xl p-6 shadow-sm hover:shadow-lg transform hover:-translate-y-1 transition">
-                  <div className="team-avatar w-24 h-24 rounded-full mx-auto bg-gradient-to-br from-blue-900 to-blue-600 flex items-center justify-center text-white font-medium text-sm border-4 border-sky-50">
-                    Photo
-                  </div>
+                <div
+                  key={member.name}
+                  className="team-card bg-white border border-slate-200 rounded-2xl p-6 shadow-sm hover:shadow-lg transform hover:-translate-y-1 transition"
+                >
+                  {member.photo ? (
+                    <img
+                      src={member.photo}
+                      alt={`${member.name} photo`}
+                      loading="lazy"
+                      className="w-24 h-24 rounded-full mx-auto object-cover border-4 border-sky-50"
+                    />
+                  ) : (
+                    <div className="w-24 h-24 rounded-full mx-auto bg-gradient-to-br from-blue-900 to-blue-600 flex items-center justify-center text-white font-medium text-sm border-4 border-sky-50">
+                      {getInitials(member.name)}
+                    </div>
+                  )}
+
                   <h3 className="team-name text-xl font-semibold text-slate-900 mt-4">{member.name}</h3>
                   <p className="team-role text-blue-800 font-semibold text-sm mt-1">{member.role}</p>
                   <p className="team-bio text-sm text-slate-500 mt-3">{member.bio}</p>
