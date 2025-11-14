@@ -2,8 +2,7 @@
 import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import Filters from "../Components/Filters"; // adjust path if needed
-import TaskCard from "../Components/TaskCardUser"; // adjust path if needed
-
+import TaskCard from "../Components/TaskCardUser";
 /* -------------------------------------------------------
    Auth + API config
 -------------------------------------------------------- */
