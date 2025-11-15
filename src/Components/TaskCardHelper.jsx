@@ -11,12 +11,10 @@ import RatingModal from "./RatingModalHelper.jsx";
 const API_BASE = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
 const getToken = () => localStorage.getItem("token") || null;
 
-// Endpoints (kept for cancel; complete will use minimal query params as backend requested)
 const CANCEL_ENDPOINT = (id) =>
   `${API_BASE}/errand/Cancel?errandId=${encodeURIComponent(id)}`;
 
 
-// Ngrok splash bypass
 const EXTRA_HEADERS = API_BASE.includes("ngrok")
   ? { "ngrok-skip-browser-warning": "true" }
   : {};
@@ -65,21 +63,11 @@ async function cancelErrand(taskId) {
   return await fetchJSON(CANCEL_ENDPOINT(taskId), { method: "POST" });
 }
 
-/* ------------------------------------------------------------------
-   REPLACED FUNCTION: completeErrand
-   Backend now expects only userProfileId + errandId.
-   This function:
-    - extracts userProfileId and errandId from the provided task
-    - builds minimal URL: /errand/TaskCompleted?userProfileId=...&errandId=...
-    - calls fetchJSON POST
-   Logging included for QA/debug.
------------------------------------------------------------------- */
+
 async function completeErrand(task) {
-  // Accept shaped object, raw backend object, or whatever is passed
   const candidate = task ?? {};
   const raw = candidate.raw ?? candidate;
 
-  // Try to extract userProfileId from common shapes.
   const userProfileId =
     raw?.userProfileId?.id ??
     raw?.userProfileId ??
@@ -91,19 +79,14 @@ async function completeErrand(task) {
   // errand id
   const errandId = raw?.id ?? null;
 
-  // QA logs
-  console.log("completeErrand called (minimal payload) with candidate:", candidate);
-  console.log("-> using raw object for resolution:", raw);
-  console.log("-> resolved userProfileId, errandId:", { userProfileId, errandId, tokenPresent: Boolean(getToken()) });
+
 
   if (!userProfileId || !errandId) {
     console.error("Missing userProfileId or errandId — aborting completeErrand", { userProfileId, errandId });
     throw new Error("Missing userProfileId or errandId");
   }
 
-  // Build minimal URL as backend requested (no helperProfileId)
   const url = `${API_BASE}/errand/TaskCompleted?userProfileId=${encodeURIComponent(userProfileId)}&errandId=${encodeURIComponent(errandId)}`;
-  console.log("-> POST URL (minimal):", url);
 
   return await fetchJSON(url, { method: "POST" });
 }
@@ -137,7 +120,6 @@ const formatINR = (v) => `₹ ${nfINR.format(Number(v || 0))}`;
 const formatDate = (iso) =>
   iso ? new Date(iso).toLocaleDateString("en-IN", { day: "2-digit", month: "2-digit", year: "numeric" }) : "-";
 
-// ---- Move pickFirst to top-level utils so it's available before useMemo ----
 const pickFirst = (...vals) => vals.find((v) => v != null && String(v).trim() !== "") ?? "";
 
 /* ────────────── UI Small Components ────────────── */
@@ -201,16 +183,15 @@ export default function TaskCardHelper({ task, autoOpen = false, onRequestClose 
     };
   }, [task]);
 
-  // customer normalizer uses pickFirst (now defined above)
   const customer = useMemo(() => {
     const p = task?.userProfileId || {};
 
     return {
-      id: p.id || "-",                                // used by Visit Profile button
-      name: p.name || p.userid?.username || "-",      // userProfile name (fallback to userid.username)
-      phone: p.phone || "-",                          // phone from userProfileId
-      email: p.userid?.email || p.email || "-",       // email from nested userid if present
-      address: p.localAddress || "-",                 // localAddress from userProfileId
+      id: p.id || "-",                               
+      name: p.name || p.userid?.username || "-",      
+      phone: p.phone || "-",                          
+      email: p.userid?.email || p.email || "-",     
+      address: p.localAddress || "-",                 
     };
   }, [task]);
 
@@ -233,7 +214,6 @@ export default function TaskCardHelper({ task, autoOpen = false, onRequestClose 
   });
 
   function showConfirm({ message, onConfirm }) {
-    console.log("showConfirm called:", message);
     setConfirmState({ open: true, message, busy: false, onConfirm });
   }
   // -----------------------------------------------------------------------------------------
@@ -288,7 +268,6 @@ export default function TaskCardHelper({ task, autoOpen = false, onRequestClose 
     showConfirm({
       message: "Mark this errand as completed?",
       onConfirm: async () => {
-        console.log(">>> confirm callback invoked — starting complete flow for task id =", t.id);
         console.log(">>> task param (shallow):", {
           id: task?.id ?? t.id,
           helperProfileId: task?.helperProfileId,
@@ -298,21 +277,14 @@ export default function TaskCardHelper({ task, autoOpen = false, onRequestClose 
         setConfirmState((s) => ({ ...s, busy: true }));
         try {
           setBusyComplete(true);
-          console.log(">>> about to call completeErrand(task) — calling now");
-          // pass raw backend object if present so extraction works
           await completeErrand(task?.raw ?? task ?? t);
-          console.log(">>> completeErrand resolved — success");
 
-          // Show success message briefly, then close details + confirm and open rating modal
           setStatusMessage({ type: "success", message: "Errand completed successfully! 🎉" });
 
-          // Clear confirm modal state immediately (close it)
           setConfirmState({ open: false, message: "", busy: false, onConfirm: null });
 
-          // Close main details modal so only rating modal remains
           setOpen(false);
 
-          // small delay so UI settles (optional), then open rating modal
           setTimeout(() => setShowRating(true), 200);
         } catch (e) {
           console.error(">>> completeErrand failed:", e);
@@ -426,8 +398,6 @@ export default function TaskCardHelper({ task, autoOpen = false, onRequestClose 
         </section>
 
         {/* Customer Contact */}
-        {/* Customer Contact */}
-        {/* Customer Contact */}
         <section className="rounded-2xl border border-slate-200 bg-white p-5">
           <div className="text-[12px] font-semibold text-slate-500 uppercase mb-3">
             Customer Contact
@@ -527,10 +497,10 @@ export default function TaskCardHelper({ task, autoOpen = false, onRequestClose 
         key={showRating ? (ratingTarget.id ?? 'rating') : 'closed'}
         visible={showRating}
         userName={ratingTarget.name}
-        userId={ratingTarget.id}   // <-- this ensures we rate the customer (id=13)
+        userId={ratingTarget.id}   
         onSubmit={(value) => {
-          console.log("⭐ Rating submitted:", value);
-          setShowRating(false);         // single source of truth
+          console.log("Rating submitted:", value);
+          setShowRating(false);         
 
 
         }}

@@ -1,7 +1,7 @@
 // UserTasksPage.jsx
 import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import Filters from "../Components/Filters"; // adjust path if needed
+import Filters from "../Components/Filters"; 
 import TaskCard from "../Components/TaskCardUser";
 /* -------------------------------------------------------
    Auth + API config
@@ -49,23 +49,17 @@ function norm(s) {
   return (s ?? "").toString().trim().replace(/\s+/g, " ").replace(/&/g, "and").toLowerCase();
 }
 
-/**
- * Robust extractor for category-like values.
- * Tries common fields and nested shapes: category, categories, tags, type, service, meta, category_id etc.
- */
+
 function extractCategoryNames(explicitCat, task) {
-  // If explicitCat provided and non-empty, normalize extraction from it first
   const candidates = [];
 
   const pushVal = (v) => {
     if (v == null) return;
     if (Array.isArray(v)) return v.forEach(pushVal);
     if (typeof v === "object") {
-      // try common name fields on object
       const name = v.name ?? v.title ?? v.label ?? v.slug ?? v.value ?? v.key;
       if (name) candidates.push(String(name));
       else {
-        // fallback stringify small object
         try { candidates.push(JSON.stringify(v)); } catch (e) {}
       }
       return;
@@ -77,7 +71,6 @@ function extractCategoryNames(explicitCat, task) {
     pushVal(explicitCat);
   }
 
-  // If we still have nothing relevant, inspect the whole task object
   if ((!explicitCat || explicitCat === "") && task) {
     const keysToCheck = [
       "category", "categories", "cat", "type", "types",
@@ -92,7 +85,6 @@ function extractCategoryNames(explicitCat, task) {
       }
     }
 
-    // extra nested checks
     if (task.category && typeof task.category === "object") pushVal(task.category.name ?? task.category.title ?? task.category.label);
     if (Array.isArray(task.categories)) task.categories.forEach(c => pushVal(c.name ?? c.title ?? c));
     if (Array.isArray(task.tags)) task.tags.forEach(t => pushVal(t.name ?? t.label ?? t));
@@ -100,13 +92,9 @@ function extractCategoryNames(explicitCat, task) {
     if (task.details && task.details.category) pushVal(task.details.category);
   }
 
-  // remove empties and duplicates
   return Array.from(new Set(candidates.map(c => c && c.toString()).filter(Boolean)));
 }
 
-/**
- * Tolerant category matcher: compares normalized strings, includes, and alphanumeric simplified matches.
- */
 function matchesCategory(taskCategory, filterCategory, task) {
   if (!filterCategory || filterCategory === "All Categories") return true;
   const wanted = norm(filterCategory);
@@ -125,7 +113,6 @@ function matchesCategory(taskCategory, filterCategory, task) {
   });
 }
 
-/* Apply status + category + search filters to an array of tasks */
 function applyFiltersToArray(arr, filters) {
   const s = filters.status ?? "All";
   const c = filters.category ?? "All Categories";
@@ -135,17 +122,14 @@ function applyFiltersToArray(arr, filters) {
     const taskStatus = t.status ?? t.state ?? "";
     const taskCategory = t.category ?? t.type ?? t.categories ?? t.tags ?? "";
 
-    // status (strict normalized equality)
     if (s && s !== "All") {
       if (norm(taskStatus) !== norm(s)) return false;
     }
 
-    // category (tolerant)
     if (c && c !== "All Categories") {
       if (!matchesCategory(taskCategory, c, t)) return false;
     }
 
-    // search (title, description, category strings)
     const hay = `${t.title ?? ""} ${t.description ?? ""} ${Array.isArray(taskCategory) ? taskCategory.join(" ") : (taskCategory?.name ?? taskCategory ?? "")}`.toLowerCase();
     if (q && !hay.includes(q)) return false;
 
@@ -167,8 +151,8 @@ const UserTasksPage = () => {
   });
 
   const [showFilters, setShowFilters] = useState(false);
-  const [allTasks, setAllTasks] = useState([]); // full dataset
-  const [tasks, setTasks] = useState([]);       // current page rows
+  const [allTasks, setAllTasks] = useState([]); 
+  const [tasks, setTasks] = useState([]);     
   const [meta, setMeta] = useState({ page: 1, pages: 1, total: 0, limit: PAGE_SIZE });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -183,7 +167,6 @@ const UserTasksPage = () => {
   const query = useMemo(() => new URLSearchParams(location.search), [location.search]);
   const taskIdFromUrl = query.get("taskId");
 
-  // fetch full list (no page/limit) — run can be called repeatedly (poll)
   const run = useCallback(async () => {
     if (busyRef.current) return;
     busyRef.current = true;
@@ -194,13 +177,6 @@ const UserTasksPage = () => {
       const json = await fetchJSON(`${TASKS_ENDPOINT}`);
       const rows = Array.isArray(json) ? json : (json?.data ?? []);
       setAllTasks(rows);
-
-      // helpful debug: inspect one sample object structure
-      console.log("DEBUG: fetched total rows:", rows.length);
-      rows.slice(0, 5).forEach((r, idx) => {
-        console.log(`SAMPLE[${idx}] id:${r.id ?? r._id ?? "(no id)"} keys:`, Object.keys(r));
-        console.log(`SAMPLE[${idx}] full:`, r);
-      });
 
       failCountRef.current = 0;
     } catch (e) {
@@ -219,16 +195,11 @@ const UserTasksPage = () => {
     }
   }, []);
 
-  // compute filteredTasks from allTasks + filters
   const filteredTasks = useMemo(() => {
     const filtered = applyFiltersToArray(allTasks, filters);
-    console.log("DEBUG filters:", filters);
-    console.log("DEBUG filtered count:", filtered.length);
-    console.log("DEBUG filtered sample categories:", filtered.slice(0, 8).map(t => extractCategoryNames(t.category, t)));
     return filtered;
   }, [allTasks, filters.status, filters.category, filters.search]);
 
-  // paginate filteredTasks whenever filteredTasks or page/limit changes
   useEffect(() => {
     const total = filteredTasks.length;
     const pages = Math.max(1, Math.ceil(total / filters.limit));
@@ -244,7 +215,6 @@ const UserTasksPage = () => {
     }
   }, [filteredTasks, filters.page, filters.limit]);
 
-  // initial fetch + optional polling
   useEffect(() => {
     setLoading(true);
     run();
@@ -272,7 +242,6 @@ const UserTasksPage = () => {
         <div className="flex gap-6">
           <aside className="hidden md:block w-64 min-w-[16rem] shrink-0">
             <Filters filters={filters} onFilterChange={(patch) => {
-              console.log("Filters.patch ->", patch);
               setFilters(f => ({ ...f, ...patch, page: 1 }));
             }} />
           </aside>
@@ -315,7 +284,6 @@ const UserTasksPage = () => {
           <div className="relative bg-white w-80 h-full shadow-xl p-6 z-50">
             <button onClick={() => setShowFilters(false)} className="absolute top-3 right-3 text-gray-500 hover:text-gray-700 text-xl">×</button>
             <Filters filters={filters} onFilterChange={(patch) => {
-              console.log("Filters.patch ->", patch);
               setFilters(f => ({ ...f, ...patch, page: 1 }));
             }} />
           </div>

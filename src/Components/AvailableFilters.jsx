@@ -14,32 +14,27 @@ const CATEGORY_OPTIONS_FALLBACK = [
 
 export default function AvailableFilters({ onFilterChange, apiBase, getToken }) {
   const [status, setStatus] = useState("All");
-  const [catId, setCatId] = useState("");        // empty => all
+  const [catId, setCatId] = useState("");        
   const [search, setSearch] = useState("");
   const [categories, setCategories] = useState(CATEGORY_OPTIONS_FALLBACK);
 
-  // price slider (single-handle "max price")
-  const [maxPrice, setMaxPrice] = useState(10000);   // default cap
-  const MIN = 0, MAX = 10000, STEP = 100;            // tweak as you like
+  const [maxPrice, setMaxPrice] = useState(10000);
+  const MIN = 0, MAX = 10000, STEP = 100;            
 
-  // emit on simple filters immediately
   useEffect(() => {
     onFilterChange?.({ status, catId, search, maxPrice });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status, catId, search]);
 
-  // --- PRICE SLIDER: call API ONLY when user stops dragging ---
   const draggingRef = useRef(false);
 
   const onPriceChange = (e) => {
-    setMaxPrice(Number(e.target.value)); // live update UI (no API call yet if dragging)
+    setMaxPrice(Number(e.target.value)); 
   };
 
   const startDrag = () => { draggingRef.current = true; };
   const endDrag = () => {
     if (!draggingRef.current) return;
     draggingRef.current = false;
-    // fire once when thumb released
     onFilterChange?.({ status, catId, search, maxPrice });
   };
 

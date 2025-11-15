@@ -6,10 +6,8 @@ const TASKS_ENDPOINT = "/errand/showAllUsersErrands"; // adjust if your API diff
 
 const EXTRA_HEADERS = API_BASE.includes("ngrok") ? { "ngrok-skip-browser-warning": "true" } : {};
 
-// small helper to get token (same as other files)
 const getToken = () => localStorage.getItem("token") ?? null;
 
-// fetch helper (similar to your other fetchJSON, but compact)
 async function fetchJSON(path, opts = {}) {
   const token = getToken();
   if (!token) {
@@ -47,7 +45,7 @@ async function fetchJSON(path, opts = {}) {
 const TasksContext = createContext(null);
 
 export function TasksProvider({ children, initialFilters = { limit: 3, page: 1, sort: "createdAt:desc" } }) {
-  const [tasks, setTasks] = useState([]);         // shared tasks list (TopTasks / Dashboard)
+  const [tasks, setTasks] = useState([]);         
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const filtersRef = useRef(initialFilters);
@@ -67,13 +65,11 @@ export function TasksProvider({ children, initialFilters = { limit: 3, page: 1, 
     async (overrides = {}) => {
       setLoading(true);
       setError(null);
-      // merge filters
       const filters = { ...filtersRef.current, ...overrides };
       filtersRef.current = filters;
       try {
         const qs = buildQs(filters);
         const json = await fetchJSON(`${TASKS_ENDPOINT}${qs ? `?${qs}` : ""}`);
-        console.log("✅ API Response from showAllUsersErrands:", json);
 
         const rows = Array.isArray(json) ? json : (json?.data ?? []);
         setTasks(Array.isArray(rows) ? rows : []);
@@ -89,12 +85,10 @@ export function TasksProvider({ children, initialFilters = { limit: 3, page: 1, 
     []
   );
 
-  // convenience: allow other pages to push their own page results into shared store
   const setSharedTasks = useCallback((rows) => {
     setTasks(Array.isArray(rows) ? rows : []);
   }, []);
 
-  // initial fetch
   useEffect(() => {
     refresh().catch(() => { });
   }, [refresh]);

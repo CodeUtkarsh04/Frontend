@@ -12,11 +12,9 @@ export const isLikelyJWT = (t) =>
   t.trim().length > 20;
 
 export const setAuth = ({ token, role, user }) => {
-  console.log('setAuth called with:', { token: !!token, role, user: !!user });
   if (token && isLikelyJWT(token)) localStorage.setItem("token", token);
   if (role) localStorage.setItem("role", role);
   if (user) localStorage.setItem("user", JSON.stringify(user));
-  console.log('After setAuth - localStorage role:', localStorage.getItem('role'));
 };
 
 export const clearAuth = () => {
@@ -50,12 +48,11 @@ export const fetchMe = async () => {
         clearAuth();
         return { role: null, user: null };
       }
-      const payload = JSON.parse(atob(token.split(".")[1] || "")); console.log('JWT payload:', payload);
+      const payload = JSON.parse(atob(token.split(".")[1] || ""));
       const role = payload?.role || payload?.roles?.[0] || payload?.userType || 'user'; // default to 'user'
       if (role) setAuth({ token, role });
       return { role, user: null };
     } catch (err) {
-      console.log('JWT decode error:', err);
       clearAuth();
       return { role: null, user: null };
     }

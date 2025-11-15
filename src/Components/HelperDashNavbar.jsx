@@ -8,7 +8,6 @@ const HelperDashNavbar = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // ✅ Detect which dashboard we're on
   useEffect(() => {
     setIsHelperView(location.pathname.startsWith("/helper"));
   }, [location.pathname]);
@@ -21,7 +20,6 @@ const HelperDashNavbar = () => {
     }
   };
 
-  // ✅ Active link styling (no underline)
   const linkClasses = ({ isActive }) =>
     `transition font-medium ${
       isActive

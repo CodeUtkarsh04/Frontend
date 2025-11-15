@@ -8,11 +8,7 @@ const formatDate = (iso) =>
 
 export default function TopTask({ max = 3 }) {
   const { tasks = [], loading, error } = useTasks();
-  console.log("TopTask — tasks from context:", tasks, " loading:", loading, " error:", error);
 
-
-  // debug if you need — uncomment to inspect
-  // console.log("TopTask tasks:", tasks);
   const STATUS_WANTED = ["available", "pending", "accepted", "ongoing", "in-progress", "in_progress"];
 
   const topOngoing = (tasks || [])

@@ -5,7 +5,7 @@ import {
   ArrowRight, Phone, Mail, Home
 } from "lucide-react";
 import AvailableFilters from "./AvailableFilters.jsx";
-import Modal from "../Components/Modal.jsx"; // adjust path if your components folder is elsewhere
+import Modal from "../Components/Modal.jsx"; 
 
 
 /* -------------------------------------------------------
@@ -16,7 +16,6 @@ const getToken = () => localStorage.getItem("token") || null;
 const AVAILABLE_ENDPOINT = "/errand/showErrands";
 const ACCEPT_ENDPOINT = "/errand/Accept";
 
-// Add ngrok splash bypass automatically when needed
 const EXTRA_HEADERS =
   BASE_URL.includes("ngrok") ? { "ngrok-skip-browser-warning": "true" } : {};
 
@@ -155,9 +154,9 @@ export default function AvailableTasks() {
   const [error, setError] = useState(null);
   const [uiError, setUiError] = useState(null);
 
-  const intervalRef = useRef(null); // keeps interval id for cleanup
-  const busyRef = useRef(false);    // prevents overlapping API calls
-  const failCountRef = useRef(0);   // stop spamming API on repeated failures
+  const intervalRef = useRef(null); 
+  const busyRef = useRef(false);   
+  const failCountRef = useRef(0);   
   const MAX_FAILS = 5;
   // Paging
   const [page, setPage] = useState(1);
@@ -166,10 +165,6 @@ export default function AvailableTasks() {
   const [filters, setFilters] = useState({ catId: "", search: "", maxPrice: 10000 });
   useEffect(() => { setPage(1); }, [filters]);
 
-
-
-  // ⬇️ define it INSIDE the component so it can access state/refs
-  // ⬇️ define it INSIDE the component so it can access state/refs
   const fetchErrands = async () => {
     if (busyRef.current) return;
     busyRef.current = true;
@@ -183,7 +178,6 @@ export default function AvailableTasks() {
       urlObj.searchParams.set("page", String(page - 1));
       urlObj.searchParams.set("size", String(PAGE_SIZE));
 
-      // send catId ONLY when a real category is selected
       const cid = Number(filters.catId);
       if (!Number.isNaN(cid) && cid > 0) {
         urlObj.searchParams.set("catId", String(cid));
@@ -193,7 +187,7 @@ export default function AvailableTasks() {
         urlObj.searchParams.set("maxPrice", String(filters.maxPrice));
       }
 
-      const urlStr = urlObj.toString(); // ✅ use the URL we built
+      const urlStr = urlObj.toString();
 
       const res = await fetch(urlStr, {
         method: "GET",
@@ -257,21 +251,16 @@ export default function AvailableTasks() {
   // Fetch tasks
   useEffect(() => {
     setLoading(true);
-    // (optional UX) clear previous page items while switching
     setData([]);
 
-    // 1) initial load
     fetchErrands();
 
-    // 2) poll every 3 seconds for the CURRENT page
     if (intervalRef.current) clearInterval(intervalRef.current);
     intervalRef.current = setInterval(fetchErrands, 3000);
 
-    // 3) also refetch when user returns to the tab
     const onVis = () => { if (!document.hidden) fetchErrands(); };
     document.addEventListener("visibilitychange", onVis);
 
-    // cleanup on unmount / when page changes
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
       document.removeEventListener("visibilitychange", onVis);
@@ -282,15 +271,10 @@ export default function AvailableTasks() {
     setPage(1);
   }, [activeFilter]);
 
-
-
-  // Filters
   const filteredTasks = useMemo(() => {
     return data.filter((t) => {
-      // High Pay tab
       if (activeFilter === "High Pay" && Number(t.price) < 250) return false;
 
-      // Price cap (client-side fallback)
       if (filters.maxPrice != null && Number(t.price) > Number(filters.maxPrice)) return false;
 
       return true;
@@ -326,12 +310,10 @@ export default function AvailableTasks() {
         throw new Error(`POST ${url} failed (${res.status}). Body: ${preview}`);
       }
       if (raw && !contentType.includes("application/json")) {
-        // Some APIs return 204 No Content; if there's content but not JSON, surface it
         const preview = raw.slice(0, 200);
         throw new Error(`Expected JSON but got "${contentType}". First 200 chars: ${preview}`);
       }
 
-      // optimistic remove from available list
       setData((prev) => prev.filter((t) => t.id !== id));
       setOpenTask(null);
     } catch (e) {
@@ -424,7 +406,6 @@ export default function AvailableTasks() {
             <span className="text-sm text-slate-600">Page {page}</span>
             <button
               onClick={() => setPage((p) => p + 1)}
-              // last-page guard: server returns < PAGE_SIZE on the last page
               disabled={data.length < PAGE_SIZE}
               className="px-3 py-1.5 rounded-lg border border-slate-300 text-[13px] text-slate-800 disabled:opacity-50"
             >

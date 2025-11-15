@@ -10,14 +10,11 @@ import RatingModal from "./RatingModalUser.jsx";
 const API_BASE = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
 const getToken = () => localStorage.getItem("token") || null;
 
-// Endpoints
 const HELPER_ENDPOINT = (id) => `${API_BASE}/errand/showAllUsersErrands`;
 const CANCEL_ENDPOINT = (id) =>
   `${API_BASE}/errand/CancelUserErrand?id=${encodeURIComponent(id)}`;
-// Ngrok splash bypass
 const EXTRA_HEADERS = API_BASE.includes("ngrok") ? { "ngrok-skip-browser-warning": "true" } : {};
 
-// Fetch helpers
 const DEFAULT_TIMEOUT_MS = 15000;
 
 /* ────────────── FETCH JSON ────────────── */
@@ -87,14 +84,13 @@ async function cancelTaskRequest(taskId) {
 
   try {
     const res = await fetch(CANCEL_ENDPOINT(taskId), {
-      method: "DELETE", // backend expects POST with ID in path
+      method: "DELETE", 
       signal: ctrl.signal,
       headers: {
         Authorization: `Bearer ${token}`,
-        Accept: "*/*", // avoid 406 if backend returns plain text
+        Accept: "*/*", 
         ...EXTRA_HEADERS,
       },
-      // no body, backend deletes directly using ID in path
     });
 
     const text = await res.text().catch(() => "");
@@ -104,7 +100,6 @@ async function cancelTaskRequest(taskId) {
       throw e;
     }
 
-    // Parse JSON if server returns it, else return null
     try {
       return text ? JSON.parse(text) : null;
     } catch {
@@ -114,18 +109,15 @@ async function cancelTaskRequest(taskId) {
     clearTimeout(t);
   }
 }
-/** Pull the helper object for a given helperId or taskId from a user's-errands list */
 function pickHelperFromErrands(json, { helperId, taskId }) {
   const rows = Array.isArray(json) ? json : (json?.data ?? []);
   if (!Array.isArray(rows) || rows.length === 0) return null;
 
-  // Prefer match by task id if we have it (most precise)
   let hit = null;
   if (taskId != null) {
     hit = rows.find(r => String(r?.id ?? r?._id) === String(taskId)) || null;
   }
 
-  // Otherwise match by helper id across common backend shapes
   if (!hit && helperId != null) {
     hit = rows.find(r =>
       String(
@@ -142,12 +134,11 @@ function pickHelperFromErrands(json, { helperId, taskId }) {
 
   if (!hit) return null;
 
-  // Common places helper data lives in the errand row:
   return (
     hit.helper ||
     hit.assignedHelper ||
     hit.helperProfile ||
-    hit.helperProfileId || // sometimes this is an embedded profile snapshot
+    hit.helperProfileId || 
     null
   );
 }
@@ -183,7 +174,6 @@ const formatDate = (iso) =>
 
 const pickFirst = (...vals) => vals.find((v) => v != null && String(v).trim() !== "") ?? "-";
 
-/** Normalize helper shape for rendering */
 function normalizeHelper(h) {
   if (!h || typeof h !== "object") return null;
   return {
@@ -201,13 +191,7 @@ function isHelperValid(helper) {
   return fields.some((v) => v && v !== "-");
 }
 
-/**
- * Helper assignment resolution
- * Rules:
- * 1) Prefer explicit assignment fields (helperProfileId/runnerId/assignedHelperId)
- * 2) Fallback: treat userProfileId as helper only if it belongs to a DIFFERENT user than the customer
- * 3) Otherwise, not assigned
- */
+
 function resolveHelperId(raw) {
   const direct =
     raw?.helperProfileId?.id ??
@@ -233,7 +217,6 @@ function resolveHelperId(raw) {
   return { id: null, from: "none" };
 }
 
-/** Normalize task with robust status + helper mapping and assignedAt derivation */
 function normalizeTask(raw) {
   const rawStatus = String(raw?.status || "").toLowerCase();
   const statusKey = STATUS_ALIAS[rawStatus] || "pending";
@@ -270,19 +253,15 @@ function normalizeTask(raw) {
     lat: raw?.pickupAddressId?.latitude ?? null,
     lng: raw?.pickupAddressId?.longitude ?? null,
 
-    // Helper
     helperId,
     helperSource,
     helper: helperSnapshot,
 
-    // Customer (task owner)
     customer: raw?.customerId || null,
     customerEmail: raw?.customerId?.email ?? "-",
 
-    // Poster snapshot (usually owner; used only for reference)
     posterProfile: raw?.userProfileId ?? null,
 
-    // Flags
     isAssigned: Boolean(helperId),
     assignedAt: helperAssignedAt,
 
@@ -317,7 +296,6 @@ function useHelperProfile(helperId, taskId, intervalMs = 3000) {
       setLoading(true);
       setError(null);
 
-      // cancel any in-flight
       if (abortRef.current) abortRef.current.abort();
       const ctrl = new AbortController();
       abortRef.current = ctrl;
@@ -441,7 +419,6 @@ export default function TaskCardUser({
     } catch { }
   }, [onRequestClose]);
 
-  // Poll helper only when modal is open AND we have a helperId
   const shouldPoll = Boolean(open && (t.helperId || t.id));
   const {
     data: helperFromApi,
@@ -450,7 +427,6 @@ export default function TaskCardUser({
     refetch,
   } = useHelperProfile(shouldPoll ? t.helperId : null, shouldPoll ? t.id : null);
 
-  // Prefer fresh API data → fallback to embedded snapshot
   const embeddedSnapshot =
     t.helper ?? t.assignedHelper ?? t.helperProfile ?? t.userProfileId ?? null;
   const helperRaw = embeddedSnapshot || helperFromApi || null;
@@ -466,7 +442,6 @@ export default function TaskCardUser({
   const canRateHelper =
     t.statusKey === "completed" && Boolean(t.helperId) && !hasRated;
 
-  // Some backends flip status to accepted/ongoing before linking helperId
   const taskAcceptedButNoHelper =
     !helperAssigned && (t.statusKey === "accepted" || t.statusKey === "ongoing");
 
@@ -475,7 +450,6 @@ export default function TaskCardUser({
       setManualRefreshing(true);
       await refetch();
     } catch {
-      // UI shows helperError if any
     } finally {
       setManualRefreshing(false);
     }
@@ -740,10 +714,10 @@ export default function TaskCardUser({
       <RatingModal
         visible={showRating}
         userName={helperName}
-        userId={t.helperId}          // <-- sends HELPER ID in the ?id= param
+        userId={t.helperId}          
         onSubmit={(value) => {
-          console.log("⭐ Rated helper:", { rating: value, helperId: t.helperId });
-          setHasRated(true);         // disable the button next time
+          console.log("Rated helper:", { rating: value, helperId: t.helperId });
+          setHasRated(true);         
           setShowRating(false);
         }}
         onClose={() => setShowRating(false)}

@@ -4,7 +4,6 @@ import { LogOut, Users, ListTodo, Star, IndianRupee, User, Smartphone } from "lu
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
-// Skeleton loaders
 const SkeletonLine = ({ className = "" }) => (
   <div className={`animate-pulse rounded bg-gray-200 ${className}`} />
 );
@@ -16,7 +15,6 @@ const SkeletonCircle = ({ size = 112 }) => (
 );
 const hasValue = (v) =>
   v !== undefined && v !== null && !(typeof v === "string" && v.trim() === "");
-// Display field
 const Field = ({ label, value }) => (
   <div className="grid md:grid-cols-[200px_1fr] gap-4 p-4 bg-gray-50 border border-gray-200 rounded-xl">
     <span className="font-bold text-gray-900">{label}</span>
@@ -30,7 +28,6 @@ const Field = ({ label, value }) => (
   </div>
 );
 
-// Stat card
 const StatCard = ({ label, value, loading }) => (
   <div
     className="rounded-2xl p-6 text-center"
@@ -56,7 +53,6 @@ const StatCard = ({ label, value, loading }) => (
   </div>
 );
 
-// --- Rating helpers & UI ---
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
 
@@ -83,7 +79,6 @@ const ProfilePage = () => {
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const navigate = useNavigate();
 
-  // initials generator
   const getInitials = (name) => {
     if (!name) return "??";
     const parts = name.trim().split(" ");
@@ -118,9 +113,7 @@ const ProfilePage = () => {
 
         const data = await res.json();
 
-        // Normalize and extract both ratings (non-invasive)
         const safeUserRating = (() => {
-          // prefer userBehaviour if available
           const r =
             data?.userBehaviour ??
             data?.userRating ??
@@ -162,10 +155,8 @@ const ProfilePage = () => {
     return () => window.removeEventListener("keydown", onKey);
   }, [showLogoutModal]);
 
-  // ---------- submitRating helper ----------
   const submitRating = async (ratingValue, source = "helper") => {
-    // source: "helper"  => current user is helper rating this profile (backend should map this to target user's userRating)
-    // source: "user"    => current user is user rating this profile (backend should map this to target helper's helperRating)
+
     try {
       const token = localStorage.getItem("token");
       if (!token) throw new Error("No auth token");
@@ -188,7 +179,6 @@ const ProfilePage = () => {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const updated = await res.json();
 
-      // update local profile state using backend values if returned, otherwise fallback
       setProfile((p) => ({
         ...p,
         userRating:

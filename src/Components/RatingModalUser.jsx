@@ -7,8 +7,8 @@ const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 export default function RatingModal({
   visible,
   userName = "User",
-  userId = null, // preferred
-  targetId = null, // legacy
+  userId = null, 
+  targetId = null, 
   onSubmit,
   onClose,
 }) {
@@ -18,7 +18,6 @@ export default function RatingModal({
   const [error, setError] = useState("");
   const containerRef = useRef(null);
 
-  // reset when closed
   useEffect(() => {
     if (!visible) {
       setHoverValue(0);
@@ -35,10 +34,8 @@ export default function RatingModal({
     setError("");
 
     try {
-      // 1) prefer props
       let resolvedUserId = userId ?? targetId ?? null;
 
-      // 2) fallback: common localStorage keys
       if (!resolvedUserId) {
         const lsId = localStorage.getItem("userId");
         if (lsId) resolvedUserId = lsId;
@@ -52,7 +49,6 @@ export default function RatingModal({
         }
       }
 
-      // 3) fallback: try decode token payload (dev-only, no validation)
       if (!resolvedUserId) {
         const token = localStorage.getItem("token");
         if (token) {
@@ -61,12 +57,11 @@ export default function RatingModal({
             const json = JSON.parse(atob(base64.replace(/-/g, "+").replace(/_/g, "/")));
             resolvedUserId = json?.id ?? json?.userId ?? json?.sub ?? null;
           } catch (e) {
-            // ignore decode errors
+            
           }
         }
       }
 
-      // final check
       if (!resolvedUserId) {
         console.error("RatingModal: missing user id (userId or targetId)");
         setError("Missing user id. Can't submit rating.");
@@ -78,7 +73,6 @@ export default function RatingModal({
       const parts = [`rating=${ratingParam}`, `id=${encodeURIComponent(String(resolvedUserId))}`];
       const url = `${BASE_URL || ""}/rating/givereview?${parts.join("&")}`;
 
-      console.log("RatingModal: submitting rating to:", url);
 
       const token = localStorage.getItem("token");
       const res = await fetch(url, {
@@ -104,7 +98,6 @@ export default function RatingModal({
         payload = text ? JSON.parse(text) : null;
       } catch { }
 
-      // success callback
       onSubmit?.(Number(value.toFixed(1)), payload);
       onClose?.();
     } catch (err) {
@@ -138,18 +131,9 @@ export default function RatingModal({
     return () => window.removeEventListener("keydown", onKey);
   }, [onKey]);
 
-  // helpful dev log to see what modal received
-  // (note: this is a hook — must run on every render for stable hook order)
-  useEffect(() => {
-    console.log("RatingModal props:", { userId, targetId, userName, visible });
-  }, [userId, targetId, userName, visible]);
-
-  // IMPORTANT: ensure hooks above always run in the same order.
-  // Only *after* declaring all hooks we decide whether to render or return null.
   if (!visible) {    return null;
   }
 
-  // pointer-based rating (works for mouse & touch)
   const handleStarPointer = (e, starIndex, commit = false) => {
     const target = e.currentTarget;
     if (!target) return;

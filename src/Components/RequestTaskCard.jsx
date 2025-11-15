@@ -1,15 +1,12 @@
 import { useState, useEffect, useRef } from "react";
 
-/* ===== Map-only changes start ===== */
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
-// ✅ proper paths for Vite / React builds
 import markerIcon2x from "leaflet/dist/images/marker-icon-2x.png";
 import markerIcon from "leaflet/dist/images/marker-icon.png";
 import markerShadow from "leaflet/dist/images/marker-shadow.png";
 
-// ✅ Create explicit default icon (Vite-safe)
 const defaultMarkerIcon = L.icon({
   iconUrl: new URL(markerIcon, import.meta.url).href,
   iconRetinaUrl: new URL(markerIcon2x, import.meta.url).href,
@@ -20,11 +17,9 @@ const defaultMarkerIcon = L.icon({
   shadowSize: [41, 41],
 });
 
-// ✅ Force Leaflet to use it globally
 L.Marker.prototype.options.icon = defaultMarkerIcon;
 
-import { useTasks } from "../context/TasksContext.jsx"; // path as appropriate
-
+import { useTasks } from "../context/TasksContext.jsx";
 
 
 
@@ -78,11 +73,9 @@ function RequestTaskCard({ variant = "default" }) {
     setTimeout(() => setAlert({ show: false, message: "", type: "info" }), 4000);
   };
 
-  // budget: allow 0..9999
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     if (name === "budget") {
-      // keep only digits, drop leading zeros (but allow a single 0)
       const cleaned = String(value).replace(/\D/g, "").replace(/^0+(?=\d)/, "");
       let n = cleaned === "" ? 0 : parseInt(cleaned, 10);
       if (n > 9999) n = 9999;
@@ -93,12 +86,10 @@ function RequestTaskCard({ variant = "default" }) {
   };
 
   const handleBudgetKeyDown = (e) => {
-    // only digits 0-9
     if (!/^[0-9]$/.test(e.key)) return;
 
     const el = e.currentTarget;
-    // when current budget is 0 and caret isn't selecting anything,
-    // replace the 0 with the first typed digit
+
     if (formData.budget === 0 && el.selectionStart === el.selectionEnd) {
       e.preventDefault();
       const next = Number(e.key); // e.g. '5' -> 5
@@ -106,7 +97,6 @@ function RequestTaskCard({ variant = "default" }) {
     }
   };
 
-  // shared reverse geocode
   async function reverseGeocode(lat, lng) {
     try {
       const res = await fetch(
@@ -122,9 +112,6 @@ function RequestTaskCard({ variant = "default" }) {
     return null;
   }
 
-  /* ===== Map-only changes start ===== */
-  // init leaflet map (once)
-  // init leaflet map (once)
   const initMap = () => {
     if (!mapRef.current || mapInstance.current) return;
 
@@ -138,11 +125,9 @@ function RequestTaskCard({ variant = "default" }) {
       attribution: "© OpenStreetMap contributors",
     }).addTo(map);
 
-    // add a default marker at the center (Mumbai) using the explicit icon
     markerRef.current = L.marker([defaultLocation.lat, defaultLocation.lng], { icon: defaultMarkerIcon }).addTo(map);
     setSelectedCoords({ lat: defaultLocation.lat, lng: defaultLocation.lng });
 
-    // try to populate the location field if empty (non-blocking)
     reverseGeocode(defaultLocation.lat, defaultLocation.lng).then((addr) => {
       if (addr) {
         setFormData((prev) => {
@@ -153,7 +138,6 @@ function RequestTaskCard({ variant = "default" }) {
       }
     });
 
-    // click handler — replaces marker and reverse-geocodes
     map.on("click", async (e) => {
       const { lat, lng } = e.latlng;
 
@@ -161,7 +145,6 @@ function RequestTaskCard({ variant = "default" }) {
         try { map.removeLayer(markerRef.current); } catch { }
       }
 
-      // add new marker at clicked location
       markerRef.current = L.marker([lat, lng], { icon: defaultMarkerIcon }).addTo(map);
 
       setSelectedCoords({ lat, lng });
@@ -177,7 +160,6 @@ function RequestTaskCard({ variant = "default" }) {
 
     mapInstance.current = map;
 
-    // ensure tiles render when shown
     requestAnimationFrame(() => {
       try {
         map.invalidateSize();
@@ -187,7 +169,6 @@ function RequestTaskCard({ variant = "default" }) {
 
   /* ===== Map-only changes end ===== */
 
-  // get browser location
   const getCurrentLocation = () => {
     if (!navigator.geolocation) {
       showAlert("Geolocation is not supported by this browser", "error");
@@ -205,7 +186,6 @@ function RequestTaskCard({ variant = "default" }) {
           if (markerRef.current) {
             mapInstance.current.removeLayer(markerRef.current);
           }
-          /* ===== Map-only change: window.L → L ===== */
           markerRef.current = L.marker([lat, lng], { icon: defaultMarkerIcon }).addTo(mapInstance.current || map);
 
           const address = await reverseGeocode(lat, lng);
@@ -220,15 +200,12 @@ function RequestTaskCard({ variant = "default" }) {
     );
   };
 
-  // submit
-  // helper: map UI urgency -> backend values
   const mapUrgency = (u) => (u === "asap" ? "asap" : "today");
 
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // basic checks (adjust as you like)
     if (!formData.description || !formData.category || !formData.address || !formData.location || !formData.urgency) {
       showAlert("Please fill in all required fields", "error");
       return;
@@ -238,7 +215,6 @@ function RequestTaskCard({ variant = "default" }) {
       return;
     }
 
-    // === Build payload to match backend exactly ===
     const payload = {
       description: formData.description.trim(),
       price: Number(formData.budget), // map budget -> price
@@ -272,7 +248,6 @@ function RequestTaskCard({ variant = "default" }) {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          // If backend wants token *as-is*, do NOT prepend 'Bearer '
           "Authorization": `Bearer ${token}`,
         },
         body: JSON.stringify(payload),
@@ -283,15 +258,11 @@ function RequestTaskCard({ variant = "default" }) {
       let data = null;
       try { data = text ? JSON.parse(text) : null; } catch { }
 
-      console.log("[submit] response", res.status, res.statusText, data || text);
 
       if (!res.ok) {
         const msg = (data && (data.message || data.error)) || `Request failed with ${res.status}`;
         throw new Error(msg);
       }
-
-      // success UI
-      // success UI
       setShowModal(true);
       setFormData({
         description: "",
@@ -309,11 +280,8 @@ function RequestTaskCard({ variant = "default" }) {
         mapInstance.current.setView([19.076, 72.8777], 13);
       }
 
-      // refresh shared tasks so TopTasks and Dashboard update
-      // non-blocking and swallow errors to avoid breaking UX
       try {
         if (typeof refreshTasks === "function") {
-          // optional: pass filters like { limit: 3 } if your provider accepts it
           refreshTasks().catch((err) => {
             console.warn("Failed to refresh shared tasks:", err);
           });
@@ -325,7 +293,6 @@ function RequestTaskCard({ variant = "default" }) {
       if (err.name === "AbortError") {
         showAlert("Network timeout. Try again.", "error");
       } else {
-        console.error("[submit] ❌", err);
         showAlert(err.message || "Failed to submit. Try again!", "error");
       }
     } finally {
@@ -352,18 +319,15 @@ function RequestTaskCard({ variant = "default" }) {
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, []);
 
-  /* ===== Map-only changes start ===== */
-  // load leaflet when map is toggled on
+
   useEffect(() => {
     const ensureMap = () => {
-      // if we have an instance but it's bound to a different (old) container, drop it
       if (mapInstance.current && mapInstance.current.getContainer() !== mapRef.current) {
         try { mapInstance.current.remove(); } catch { }
         mapInstance.current = null;
         markerRef.current = null;
       }
       if (!mapInstance.current) initMap();
-      // make sure tiles recalc once visible
       requestAnimationFrame(() => {
         try { mapInstance.current?.invalidateSize(); } catch { }
       });
@@ -377,15 +341,12 @@ function RequestTaskCard({ variant = "default" }) {
         mapInstance.current = null;
         markerRef.current = null;
       }
-      // tidy up any leftover leaflet id on the DOM node (helps in HMR/dev)
       if (mapRef.current && mapRef.current._leaflet_id) {
         try { delete mapRef.current._leaflet_id; } catch { }
       }
     }
   }, [showMap]);
-  /* ===== Map-only changes end ===== */
 
-  // cleanup map on unmount
   useEffect(() => {
     return () => {
       try {
@@ -396,7 +357,6 @@ function RequestTaskCard({ variant = "default" }) {
     };
   }, []);
 
-  // gradient % for 0..9999
   const fillPercent = Math.round((formData.budget / 9999) * 100);
 
   return (
@@ -508,10 +468,8 @@ function RequestTaskCard({ variant = "default" }) {
                     name="location"
                     value={formData.location}
                     readOnly
-                    // when user focuses or clicks, open the map so they know how to set it
                     onFocus={() => setShowMap(true)}
                     onMouseDown={(e) => {
-                      // prevent caret/click selection visual (keeps field focusable for a11y)
                       e.preventDefault();
                       setShowMap(true);
                     }}

@@ -12,23 +12,19 @@ const getToken = () => localStorage.getItem("token") || null;
 const LIST_ENDPOINT = "/errand/HelperTask";
 
 const EXTRA_HEADERS = API_BASE.includes("ngrok") ? { "ngrok-skip-browser-warning": "true" } : {};
-console.log("🔧 [HELPER-PAGE/CFG] API_BASE =", API_BASE, "EXTRA_HEADERS =", EXTRA_HEADERS);
 
 /* -------------------------------------------------------
    Fetch helper with robust error handling
 -------------------------------------------------------- */
 async function fetchJSON(path, opts = {}) {
   const token = getToken();
-  console.log("🔐 [HELPER-PAGE/AUTH] token present?", Boolean(token));
   if (!token) {
     const err = new Error("Not authenticated");
     err.status = 401;
-    console.warn("⛔ [HELPER-PAGE/AUTH] Missing token → throwing 401");
     throw err;
   }
 
   const url = path.startsWith("http") ? path : `${API_BASE}${path}`;
-  console.log("🌐 [HELPER-PAGE/HTTP] FETCH", url, "method:", opts.method || "GET");
 
   const res = await fetch(url, {
     ...opts,
@@ -44,26 +40,21 @@ async function fetchJSON(path, opts = {}) {
   const contentType = res.headers.get("content-type") || "";
   const raw = await res.text().catch(() => "");
 
-  console.log("📥 [HELPER-PAGE/HTTP] status:", res.status, "content-type:", contentType, "raw.len:", raw?.length);
 
   if (!res.ok) {
     const err = new Error(`HTTP ${res.status}: ${raw.slice(0, 200)}`);
     err.status = res.status;
-    console.error("🔥 [HELPER-PAGE/HTTP] Error:", err.message);
     throw err;
   }
 
   if (!raw) {
-    console.warn("⚠️ [HELPER-PAGE/HTTP] Empty body");
     return null;
   }
 
   try {
     const parsed = JSON.parse(raw);
-    console.log("✅ [HELPER-PAGE/HTTP] Parsed JSON ok (keys):", Object.keys(parsed || {}));
     return parsed;
   } catch (e) {
-    console.error("💥 [HELPER-PAGE/HTTP] JSON parse failed:", e.message, "raw head:", raw.slice(0, 200));
     throw new Error(`Bad JSON: ${e.message}. First 200 chars: ${raw.slice(0, 200)}`);
   }
 }
@@ -87,7 +78,6 @@ function buildQuery(filters) {
   if (filters.page) p.set("page", String(filters.page));
   if (filters.sort) p.set("sort", filters.sort);
   const qs = p.toString();
-  console.log("🧮 [HELPER-PAGE/QS] built:", qs);
   return qs;
 }
 
@@ -170,7 +160,6 @@ function shapeTaskRow(x) {
     helperProfileId: x.helperProfileId ?? null,
     urgency: x.urgency ?? null,
 
-    // Keep raw object for card integration
     raw: x,
   };
   return shaped;
@@ -271,7 +260,6 @@ export default function HelperTaskPage() {
   // Core fetch-run function
   const run = useCallback(async () => {
     if (busyRef.current) {
-      console.log("🟡 [HELPER-PAGE/RUN] Skipped (busy)...");
       return;
     }
     busyRef.current = true;
@@ -310,9 +298,7 @@ export default function HelperTaskPage() {
 
 
       failCountRef.current = 0;
-      console.log("✅ [HELPER-PAGE/RUN] done. tasks:", shaped.length);
     } catch (e) {
-      console.error("🔥 [HELPER-PAGE/RUN] error:", e);
       setTasks([]);
       setMeta({ page: 1, pages: 1, total: 0, limit: filters.limit });
       setError(e);
@@ -321,7 +307,6 @@ export default function HelperTaskPage() {
       if (failCountRef.current >= MAX_FAILS && intervalRef.current) {
         clearInterval(intervalRef.current);
         intervalRef.current = null;
-        console.warn("🛑 [HELPER-PAGE/RUN] Polling stopped due to repeated failures.");
       }
     } finally {
       busyRef.current = false;
@@ -338,28 +323,21 @@ export default function HelperTaskPage() {
     const filtered = allTasksShaped.filter(t => {
       if (!t) return false;
 
-      // status: normalized equality
       if (s && s !== "All") {
         if (norm(t.status ?? t.raw?.status ?? "") !== norm(s)) return false;
       }
 
-      // category: tolerant matching (uses matchesCategory)
       if (c && c !== "All Categories") {
         const taskCategoryField = t.categoryId?.name ?? t.raw?.category ?? t.categoryId ?? t.raw;
         if (!matchesCategory(taskCategoryField, c, t.raw ?? t)) return false;
       }
 
-      // search (title/description/category)
       const taskCategoryValue = Array.isArray(t.categoryId) ? t.categoryId.join(" ") : (t.categoryId?.name ?? t.raw?.category ?? "");
       const hay = `${t.title ?? ""} ${t.description ?? ""} ${taskCategoryValue}`.toLowerCase();
       if (q && !hay.includes(q)) return false;
 
       return true;
     });
-
-    console.log("DEBUG Helper: filters:", filters);
-    console.log("DEBUG Helper: filtered count:", filtered.length);
-    console.log("DEBUG Helper: filtered sample cats:", filtered.slice(0, 8).map(x => extractCategoryNames(x.categoryId ?? x.raw?.category, x.raw)));
     return filtered;
   }, [allTasksShaped, filters.status, filters.category, filters.search]);
 
@@ -382,7 +360,6 @@ export default function HelperTaskPage() {
 
   // initial load + polling + visibility handler
   useEffect(() => {
-    console.log("🔄 [HELPER-PAGE/EFFECT] initial load/poll setup");
     setLoading(true);
     run();
 
@@ -391,30 +368,25 @@ export default function HelperTaskPage() {
 
     const onVis = () => {
       if (!document.hidden) {
-        console.log("👀 [HELPER-PAGE/VIS] tab visible → refresh");
         run();
       }
     };
     document.addEventListener("visibilitychange", onVis);
 
     return () => {
-      console.log("🧹 [HELPER-PAGE/CLEANUP] clear interval + listener");
       if (intervalRef.current) clearInterval(intervalRef.current);
       document.removeEventListener("visibilitychange", onVis);
     };
   }, [run]);
 
   const handleFilterChange = useCallback((patch) => {
-    console.log("🧮 [HELPER-PAGE/FILTER] patch:", patch);
     setFilters((f) => ({ ...f, ...patch, page: 1 }));
   }, []);
 
   const handleAfterAction = useCallback(() => {
-    console.log("♻️ [HELPER-PAGE/CARD] onAfterAction → refresh list");
     run();
   }, [run]);
 
-  console.log("🧰 [HELPER-PAGE/RENDER] loading:", loading, "error:", error?.message, "tasks:", tasks.length, "meta:", meta);
 
   return (
     <div className="min-h-dvh bg-gray-50">

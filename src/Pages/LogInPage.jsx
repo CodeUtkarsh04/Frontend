@@ -12,7 +12,6 @@ export default function LogInPage({ mode = "user" }) {
   const [message, setMessage] = useState({ type: "", text: "" });
   const [touched, setTouched] = useState({ email: false, password: false });
 
-  // Enhanced validation
   const validateEmail = (email) => {
     const emailRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
     return emailRegex.test(email) && email.length <= 254;
@@ -70,14 +69,12 @@ export default function LogInPage({ mode = "user" }) {
       `Login failed (${resp.status})`;
 
 
-    // Normalize output to { token, user }
     let token = null;
     let user = null;
 
     if (typeof body === "string") {
       token = body.trim();
     } else if (body && typeof body === "object") {
-      // If server encodes failures inside 200s, try to detect them
       const looksLikeFailure =
         body.success === false ||
         body.errorMessage ||
@@ -93,8 +90,6 @@ export default function LogInPage({ mode = "user" }) {
     }
 
     if (!isLikelyJWT(token)) {
-      // If your auth is cookie-based (no JWT in body), you could relax this
-      // and rely on /auth/me below. For now, block obvious junk.
       throw new Error("Invalid email or password.");
     }
 
@@ -128,9 +123,7 @@ export default function LogInPage({ mode = "user" }) {
       }
       setAuth({ token: res.token, role, user: me?.user || res?.user || null });
 
-      console.log('Final role before navigation:', role);
-      console.log('Token in localStorage:', localStorage.getItem('token'));
-      console.log('Role in localStorage:', localStorage.getItem('role'));
+
 
       setMessage({ type: "success", text: "Login successful!" });
 
@@ -238,11 +231,7 @@ export default function LogInPage({ mode = "user" }) {
                 Password must be at least 6 characters.
               </p>
             )}
-            {/* <div className="text-right mt-2">
-              <a href="#" onClick={handleForgotPassword} className="text-sm text-indigo-600 hover:underline">
-                Forgot your password?
-              </a>
-            </div> */}
+
           </div>
 
           {/* Button */}

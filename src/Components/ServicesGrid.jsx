@@ -5,7 +5,7 @@ import {
   Package,
   Dog,
   House,
-  CircleUserRound, // ✅ correct icon name
+  CircleUserRound, 
   CarTaxiFront
 } from "lucide-react";
 

@@ -13,9 +13,7 @@ function decodeRole(token) {
 
 export default function ProtectedRoute({ children, allowed }) {
   const token = getToken();
-  console.log('ProtectedRoute - Token:', token);
   if (!token) {
-    console.log('No token, redirecting to login');
     return <Navigate to="/login" replace />;
   }
 
@@ -23,12 +21,9 @@ export default function ProtectedRoute({ children, allowed }) {
     let role = getRole();
     if (!role) role = decodeRole(token);
 
-    console.log('ProtectedRoute - Role:', role, 'Allowed:', allowed);
     if (!role || !allowed.includes(role)) {
-      console.log('Role not allowed, redirecting to login');
       return <Navigate to="/login" replace />;
     }
   }
-  console.log('ProtectedRoute - Access granted');
   return children;
 }
