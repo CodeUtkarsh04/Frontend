@@ -76,23 +76,7 @@ export default function ServicesPage() {
     }, [category, query, sortBy]);
 
     return (
-        <div className="min-h-screen bg-gray-50 text-gray-900">
-            {/* NAV simplified - reuse your app nav in actual project */}
-            <nav className="bg-white shadow-sm">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="flex justify-between items-center h-16">
-                        <div className="flex items-center gap-4">
-                            <div className="h-10 w-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold">DD</div>
-                            <div className="font-semibold text-lg">DailyDone</div>
-                        </div>
-                        <div className="hidden md:flex items-center gap-6 text-sm text-gray-600">
-                            <a href="/services" className="text-blue-600 font-medium">Services</a>
-                            <a href="/how" className="hover:text-gray-900">How it works</a>
-                            <a href="/about" className="hover:text-gray-900">About</a>
-                        </div>
-                    </div>
-                </div>
-            </nav>
+        <div className="min-h-screen bg-gray-50 text-gray-900 pt-10">
 
             {/* HERO */}
             <header className="bg-white">

@@ -41,8 +41,7 @@ const faqs = [
 
 export default function HowDDPage() {
   return (
-    <div className="min-h-screen bg-gray-50 text-gray-900">
-
+    <div className="min-h-screen bg-gray-50 text-gray-900 pt-10">
       {/* HERO */}
       <header className="bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 lg:py-24 flex flex-col lg:flex-row items-center gap-12">
